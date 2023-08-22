@@ -1,9 +1,12 @@
 const puppeteer = require("puppeteer-extra");
 const { regexUrl } = require("../utils/url");
 const { headless } = require("../config/config");
-const Story = require("../models/mongo/Story");
-const Chapter = require("../models/mongo/Chapter");
 const config = require("../config/config");
+const { downloadImg } = require("../utils/downloadImg");
+const { initImageStorage } = require("../utils/storage");
+const { insertChapter, updateChapter, getUncrawlerChapter } = require("../services/ChapterService");
+const { insertStory } = require("../services/StoryService");
+
 let listBrowser = [];
 
 const crawlStory = async (req, res) => {
@@ -44,9 +47,12 @@ const crawlStory = async (req, res) => {
                 };
             }, url);
 
-            const story = await saveStory(extractedData.story);
-            const storyId = story._id;
+            const story = await insertStory(extractedData.story);
+            if (!story) {
+                reject("Link da ton tai trong db");
+            }
 
+            const storyId = story._id;
             const chaptersWithStoryId = extractedData.chapters.map(link => ({
                 link: link,
                 story_id: storyId,
@@ -54,18 +60,13 @@ const crawlStory = async (req, res) => {
                 images: [],
                 status: 0,
             }));
-            await browser.close();
 
-            await saveChapters(chaptersWithStoryId);
+            await browser.close();
+            await insertChapter(chaptersWithStoryId);
             await initBrowser();
 
-            let listChapters = [];
-            await Chapter.find({ status: 0 }).exec().then((result) => {
-                listChapters = result
-            }).catch((err) => {
-                console.log(err);
-            });;
-
+            let listChapters = await getUncrawlerChapter() || [];
+            console.log(listChapters);
 
             while (listChapters.length) {
                 const browser = await getBrowser();
@@ -100,15 +101,27 @@ const crawlChapter = async (browser, chapter) => {
                 const images = Array.from(
                     document.querySelectorAll('.reading-detail .page-chapter > img'))
                     .map(src => {
-                        if (src.getAttribute("src") === 'https://nettruyenhd.com/images/current-site.webp') {
-                            return null;
-                        }
-
-                        return src.getAttribute("src");
+                        return src.getAttribute("src").replace('//', 'https://');
                     });
 
                 return { chap, images };
             });
+
+            const dir = initImageStorage(chapter.story_id, chapter._id);
+
+            let i = 0
+            extractedData.images.forEach(url => {
+                if (url) {
+                    const path = dir + '/' + ++i + '.jpg';
+                    downloadImg(url, path, function (err) {
+                        if (err) {
+                            console.log(err);
+                        } else {
+                            console.log('done');
+                        }
+                    });
+                }
+            })
 
             const chapterResult = await updateChapter(chapter._id, extractedData);
 
@@ -146,46 +159,13 @@ const getBrowser = async () => {
 }
 
 const closeAllBrowser = async () => {
+    while (listBrowser.find(e => e.status === 1)) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+
     listBrowser.forEach(browser => {
         browser.browser.close();
     });
-}
-
-const saveStory = async ({ title, thumbnail, url, author, description }) => {
-    try {
-        return await Story({
-            title: title,
-            thumbnail: thumbnail,
-            url: url,
-            author: author,
-            description: description
-        }).save();
-    } catch (error) {
-        console.error(error);
-        return false;
-    }
-};
-
-const saveChapters = async (chapters) => {
-    try {
-        return await Chapter.insertMany(chapters);
-    } catch (error) {
-        console.error(error);
-        return false;
-    }
-}
-
-const updateChapter = async (chapterId, { chap, images }) => {
-    try {
-        return await Chapter.findOneAndUpdate(
-            { _id: chapterId },
-            { chap: chap, images: images, status: 1 }
-        );
-    } catch (error) {
-        console.error(error);
-        await Chapter.findOneAndUpdate({ _id: chapterId }, { status: 2 })
-        return false;
-    }
 }
 
 module.exports = { crawlStory };

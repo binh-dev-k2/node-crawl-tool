@@ -14,9 +14,10 @@ const config = {
         password: '',
         database: 'crawler'
     },
-    headless: true,
+    headless: false,
     numberBrowser: 3,
     process: 'development',
+    host: 'https://www.nettruyenmax.com/'
 }
 
 module.exports = config;
