@@ -1,36 +1,47 @@
 const Chapter = require("../models/mongo/Chapter");
 
 const insertChapter = async (chapters) => {
+    try {
+        // const promises = chapters.map(async (chapter) => {
+        //     await new Chapter(chapter).save();
+        // });
+        // await Promise.all(promises);
+
+        // return true;
+        return await Chapter.insertMany(chapters);
+    } catch (error) {
+        console.error(error);
+        return false;
+    }
+}
+
+const updateChapter = async (chapter) => {
+    const query = { url: chapter.url };
+
     const options = { upsert: true, new: true, setDefaultsOnInsert: true };
 
     try {
-        const promises = chapters.map(async (chapter) => {
-            await Chapter.findOneAndUpdate({ link: chapter.link }, chapter, options);
-        });
-        await Promise.all(promises);
-
-        return true;
-        // return await Chapter.insertMany(chapters);
+        return await Chapter.findOneAndUpdate(query, chapter, options);
     } catch (error) {
         console.error(error);
+        await Chapter.findOneAndUpdate(query, { status: 2 }, options);
         return false;
     }
 }
 
-const updateChapter = async (chapterId, { chap, images }) => {
+const updateChapters = async (chapters) => {
     try {
-        return await Chapter.findOneAndUpdate(
-            { _id: chapterId },
-            { chap: chap, images: images, status: 1 }
-        );
+        for (const chapter of chapters) {
+            await updateChapter(chapter);
+        }
+        return true;
     } catch (error) {
         console.error(error);
-        await Chapter.findOneAndUpdate({ _id: chapterId }, { status: 2 })
         return false;
     }
 }
 
-const getUncrawlerChapter = async () => {
+const getUncrawlerChapters = async () => {
     try {
         return await Chapter.find({ status: 0 }).exec();
     } catch (error) {
@@ -39,4 +50,4 @@ const getUncrawlerChapter = async () => {
     }
 }
 
-module.exports = { insertChapter, updateChapter, getUncrawlerChapter };
+module.exports = { insertChapter, updateChapter, updateChapters, getUncrawlerChapters };

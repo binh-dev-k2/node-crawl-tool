@@ -3,6 +3,6 @@ const crawl = require('../controller/crawl')
 
 const router = express.Router();
 
-router.route('/').post(crawl.crawlStory);
+router.route('/').post(crawl.crawl);
 
 module.exports = router;

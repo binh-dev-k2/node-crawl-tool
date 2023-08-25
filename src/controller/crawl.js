@@ -1,119 +1,221 @@
-const puppeteer = require("puppeteer-extra");
 const { regexUrl } = require("../utils/url");
-const { headless } = require("../config/config");
 const config = require("../config/config");
-const { downloadImg } = require("../utils/downloadImg");
-const { initImageStorage } = require("../utils/storage");
-const { insertChapter, updateChapter, getUncrawlerChapter } = require("../services/ChapterService");
-const { insertStory } = require("../services/StoryService");
+const { downloadImage, initImageStorage } = require("../utils/images");
+const { insertChapter, updateChapter, getUncrawlerChapters, updateChapters } = require("../services/ChapterService");
+const { insertStory, updateStory, updateStories, getUncrawlerStories } = require("../services/StoryService");
+const { initBrowser, getBrowser, clearBrowser, makeBrowserPending, checkAllBrowserPending } = require("../utils/browsers");
 
-let listBrowser = [];
+let browsers = [];
+const pageSelector = config.pageSelector
+const storySelector = config.storySelector
+const chapterSelector = config.chapterSelector
 
-const crawlStory = async (req, res) => {
-    const browser = await puppeteer.launch({
-        headless: headless,
-        args: ["--no-sandbox"],
+const crawl = async (req, res) => {
+    await initBrowser(browsers);
+    let browser = null;
+    let i = 0;
+
+    while (i++ < 1) {
+        browser = await getBrowser(browsers);
+
+        try {
+            if (browser) {
+                const pageUrl = config.host + '?page=' + i;
+                console.log(i);
+                crawlPage(browser, pageUrl, true);
+                await new Promise(resolve => setTimeout(resolve, 250));
+            } else {
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+        } catch (error) {
+            console.error(error);
+            break;
+        }
+    }
+
+    await checkAllBrowserPending(browsers);
+
+    let uncrawledStories = await getUncrawlerStories() || [];
+    while (uncrawledStories.length) {
+        browser = await getBrowser(browsers);
+
+        if (browser) {
+            const story = uncrawledStories.shift();
+            CrawlStory(browser, story.url, true);
+            await new Promise(resolve => setTimeout(resolve, 250));
+        } else {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+    }
+
+    await checkAllBrowserPending(browsers);
+
+    let uncrawledChapters = await getUncrawlerChapters() || [];
+    while (uncrawledChapters.length) {
+        browser = await getBrowser(browsers);
+
+        if (browser) {
+            const chapter = uncrawledChapters.shift();
+            crawlChapter(browser, chapter.url);
+            await new Promise(resolve => setTimeout(resolve, 250));
+        } else {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+    }
+
+    return true;
+}
+
+const crawlPage = async (browser, pageUrl, isNew = false) => {
+    const page = await browser.browser.newPage();
+    await page.goto(pageUrl, { waitUntil: 'load', timeout: 0 });
+    await page.waitForTimeout(1000);
+
+    return new Promise(async (resolve, reject) => {
+        try {
+            const extractedData = await page.evaluate((pageSelector) => {
+                const stories = Array
+                    .from(document.querySelectorAll(pageSelector.container))
+                    .map(story => {
+                        return {
+                            url: story.querySelector(pageSelector.url).getAttribute('href'),
+                            status: 0
+                        }
+                    });
+
+                return stories;
+            }, pageSelector);
+
+            const stories = isNew ? await updateStories(extractedData) : await updateStories(extractedData);
+
+            if (!stories) {
+                await makeBrowserPending(browser, page);
+                reject("Co loi xay ra");
+            }
+
+            await makeBrowserPending(browser, page);
+            resolve(true);
+        } catch (error) {
+            console.error(error);
+            await makeBrowserPending(browser, page);
+            reject("Co loi xay ra: " + error.message);
+        }
     });
+}
 
-    try {
-        const url = await req.body.url;
-        const page = await browser.newPage();
-        await page.goto(url);
-        await page.waitForTimeout(1000);
+const CrawlStory = async (browser, storyUrl, isNew = false) => {
+    const page = await browser.browser.newPage();
+    await page.goto(storyUrl, { waitUntil: 'load', timeout: 0 });
+    await page.waitForSelector('#ctl00_divCenter');
 
-        return new Promise(async (resolve, reject) => {
-            const extractedData = await page.evaluate((url) => {
-                const title = document.querySelector("#item-detail > h1").textContent;
+    return new Promise(async (resolve, reject) => {
+        try {
+            const extractedData = await page.evaluate((storyUrl, storySelector, chapterSelector) => {
+                const title = document
+                    .querySelector(storySelector.title)
+                    .textContent;
 
                 const thumbnail = document
-                    .querySelector(
-                        "#item-detail > div.detail-info > div > div.col-xs-4.col-image > img"
-                    )
+                    .querySelector(storySelector.thumbnail)
                     .getAttribute("src")
-                    .replace("//", "/");
-                const author = document.querySelector("#item-detail > div.detail-info > div > div.col-xs-8.col-info > ul > li.author.row > p.col-xs-8").textContent;
+                    .replace("//", "https://");
 
-                const description = "hihi";
+                const author = document
+                    .querySelector(storySelector.author)
+                    .textContent;
 
-                const chapters = Array.from(
-                    document.querySelectorAll('#nt_listchapter > nav > ul > li > div.col-xs-5.chapter > a'))
-                    .map(href =>
-                        href.getAttribute("href")
-                    );
+                const description = storySelector.description;
+
+                const chapters = Array
+                    .from(document.querySelectorAll(chapterSelector.container))
+                    .map(href => href.getAttribute("href"));
+
+                const url = storyUrl;
 
                 return {
-                    story: { title, thumbnail, url, author, description },
+                    story: {
+                        title: title,
+                        thumbnail: thumbnail,
+                        url: url,
+                        author: author,
+                        description: description,
+                        status: 1
+                    },
                     chapters: chapters
                 };
-            }, url);
 
-            const story = await insertStory(extractedData.story);
+            }, storyUrl, storySelector, chapterSelector);
+
+            const story = isNew
+                ? await insertStory(extractedData.story)
+                : await updateStory(extractedData.story);
+
             if (!story) {
-                reject("Link da ton tai trong db");
+                await makeBrowserPending(browser, page);
+                reject("Co loi xay ra");
             }
 
             const storyId = story._id;
-            const chaptersWithStoryId = extractedData.chapters.map(link => ({
-                link: link,
+            const data = extractedData.chapters.map(url => ({
+                url: url,
                 story_id: storyId,
-                chap: '',
-                images: [],
                 status: 0,
             }));
 
-            await browser.close();
-            await insertChapter(chaptersWithStoryId);
-            await initBrowser();
-
-            let listChapters = await getUncrawlerChapter() || [];
-            console.log(listChapters);
-
-            while (listChapters.length) {
-                const browser = await getBrowser();
-                if (browser) {
-                    const chapter = listChapters.shift();
-                    crawlChapter(browser, chapter);
-                } else {
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                }
+            let chapters = isNew ? await insertChapter(data) : await updateChapters(data);
+            if (!chapters) {
+                await makeBrowserPending(browser, page);
+                reject("Co loi xay ra");
             }
 
-            closeAllBrowser();
-            res.status(200).send(listChapters);
-            resolve(listChapters);
-        })
-    } catch (error) {
-        console.error(error);
-        await browser.close();
-        res.status(500).send("Internal Server Error");
-    }
-};
+            await makeBrowserPending(browser, page);
+            resolve(true);
+        } catch (error) {
+            
+            console.error(error);
+            await makeBrowserPending(browser, page);
+            reject("Co loi xay ra: " + error.message);
+        }
+    })
+}
 
-const crawlChapter = async (browser, chapter) => {
-    try {
-        const page = await browser.browser.newPage();
-        await page.goto(chapter.link);
-        await page.waitForTimeout(1000);
+const crawlChapter = async (browser, chapterUrl) => {
+    const page = await browser.browser.newPage();
+    await page.goto(chapterUrl, { timeout: 0 });
+    // await page.waitForSelector('div.reading-detail.box_doc')
+    await page.waitForTimeout(1000);
 
-        return new Promise(async (resolve, reject) => {
-            const extractedData = await page.evaluate(() => {
-                const chap = document.querySelector('#ctl00_divCenter > div > div:nth-child(1) > div.top > h1 > span').textContent
+    return new Promise(async (resolve, reject) => {
+        try {
+            const extractedData = await page.evaluate((chapterSelector, chapterUrl) => {
+                const chap = document
+                    .querySelector(chapterSelector.chap)
+                    .textContent
+
                 const images = Array.from(
-                    document.querySelectorAll('.reading-detail .page-chapter > img'))
-                    .map(src => {
-                        return src.getAttribute("src").replace('//', 'https://');
-                    });
+                    document
+                        .querySelectorAll(chapterSelector.images))
+                    .map(src => src.getAttribute("src").replace('//', 'https://'));
 
-                return { chap, images };
-            });
+                const url = chapterUrl;
 
-            const dir = initImageStorage(chapter.story_id, chapter._id);
+                return { chap: chap, images: images, url: url, status: 1 };
+            }, chapterSelector, chapterUrl);
 
-            let i = 0
+            const chapter = await updateChapter(extractedData);
+
+            if (!chapter) {
+                await makeBrowserPending(browser, page);
+                reject("Co loi xay ra");
+            }
+
+            const dir = initImageStorage(chapter.story_id, chapter._id.toString());
+
+            let i = 0;
             extractedData.images.forEach(url => {
                 if (url) {
                     const path = dir + '/' + ++i + '.jpg';
-                    downloadImg(url, path, function (err) {
+                    downloadImage(url, path, function (err) {
                         if (err) {
                             console.log(err);
                         } else {
@@ -121,51 +223,15 @@ const crawlChapter = async (browser, chapter) => {
                         }
                     });
                 }
-            })
-
-            const chapterResult = await updateChapter(chapter._id, extractedData);
-
-            await page.close();
-            browser.status = 0;
-            resolve(chapterResult);
-        })
-    } catch (error) {
-        console.error(error);
-        browser.status = 0;
-    }
-}
-
-const initBrowser = async () => {
-    if (listBrowser.length === 0) {
-        for (let i = 1; i <= config.numberBrowser; i++) {
-            const browser = await puppeteer.launch({
-                headless: config.headless,
-                args: ["--no-sandbox", '--disable-features=site-per-process'],
             });
-            listBrowser.push({ status: 0, browser: browser });
+
+            await makeBrowserPending(browser, page);
+            resolve(true);
+        } catch (error) {
+            await makeBrowserPending(browser, page);
+            reject("Co loi xay ra: " + error.message);
         }
-    }
-    return true;
-}
+    })
+};
 
-const getBrowser = async () => {
-    let browser = listBrowser.find(e => e.status === 0);
-    if (browser) {
-        browser.status = 1;
-        return browser;
-    } else {
-        return false;
-    }
-}
-
-const closeAllBrowser = async () => {
-    while (listBrowser.find(e => e.status === 1)) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-    }
-
-    listBrowser.forEach(browser => {
-        browser.browser.close();
-    });
-}
-
-module.exports = { crawlStory };
+module.exports = { crawl, crawlPage, CrawlStory, crawlChapter };
