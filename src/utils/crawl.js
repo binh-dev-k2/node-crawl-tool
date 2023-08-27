@@ -34,7 +34,7 @@ const crawlPage = async (browser, pageUrl, isNew = false) => {
 
             if (!stories) {
                 await makeBrowserPending(browser, page);
-                reject("Co loi xay ra");
+                reject(false);
             }
 
             await makeBrowserPending(browser, page);
@@ -42,7 +42,7 @@ const crawlPage = async (browser, pageUrl, isNew = false) => {
         } catch (error) {
             console.error(error);
             await makeBrowserPending(browser, page);
-            reject("Co loi xay ra: " + error.message);
+            reject(false);
         }
     });
 }
@@ -151,8 +151,7 @@ const crawlChapter = async (browser, chapterUrl, isNew = false) => {
 
             if (!chapter) {
                 await makeBrowserPending(browser, page);
-                reject("Co loi xay ra");
-                return false;
+                reject(false);
             }
 
             let storyId = null;
@@ -202,8 +201,9 @@ const crawlChapter = async (browser, chapterUrl, isNew = false) => {
             await makeBrowserPending(browser, page);
             resolve(chapter);
         } catch (error) {
+            console.log(error);
             await makeBrowserPending(browser, page);
-            reject("Co loi xay ra: " + error.message);
+            reject(false);
         }
     })
 };
