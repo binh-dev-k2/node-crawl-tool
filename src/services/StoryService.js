@@ -45,7 +45,16 @@ const updateStories = async (stories) => {
     }
 }
 
-const getUncrawlerStories = async () => {
+const findStory = async (url) => {
+    try {
+        return await Story.find({ url: url }).exec();
+    } catch (error) {
+        console.error(error);
+        return false;
+    }
+}
+
+const getUncrawledStories = async () => {
     try {
         return await Story.find({ status: 0 }).exec();
     } catch (error) {
@@ -54,4 +63,4 @@ const getUncrawlerStories = async () => {
     }
 }
 
-module.exports = { insertStory, insertStories, updateStory, updateStories, getUncrawlerStories };
+module.exports = { insertStory, insertStories, updateStory, updateStories, getUncrawledStories, findStory };

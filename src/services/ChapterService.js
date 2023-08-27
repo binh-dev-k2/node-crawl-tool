@@ -41,7 +41,16 @@ const updateChapters = async (chapters) => {
     }
 }
 
-const getUncrawlerChapters = async () => {
+const findChapters = async (storyId) => {
+    try {
+        return await Chapter.find({ story_id: storyId }).exec();
+    } catch (error) {
+        console.error(error);
+        return false;
+    }
+}
+
+const getUncrawledChapters = async () => {
     try {
         return await Chapter.find({ status: 0 }).exec();
     } catch (error) {
@@ -50,4 +59,4 @@ const getUncrawlerChapters = async () => {
     }
 }
 
-module.exports = { insertChapter, updateChapter, updateChapters, getUncrawlerChapters };
+module.exports = { insertChapter, updateChapter, updateChapters, getUncrawledChapters, findChapters };

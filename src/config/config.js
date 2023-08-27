@@ -23,12 +23,13 @@ const config = {
         url: 'figure > figcaption > h3 > a'
     },
     storySelector: {
-        title: '#item-detail > h1',
+        title: '#item-detail > h1.title-detail',
         thumbnail: '#item-detail > div.detail-info > div > div.col-xs-4.col-image > img',
         author: '#item-detail > div.detail-info > div > div.col-xs-8.col-info > ul > li.author.row > p.col-xs-8',
         description: 'No infomation'
     },
     chapterSelector: {
+        storyUrl: '#ctl00_divCenter > div > div:nth-child(1) > div.top > h1 > a',
         container: '#nt_listchapter > nav > ul > li > div.col-xs-5.chapter > a',
         chap: '#ctl00_divCenter > div > div:nth-child(1) > div.top > h1 > span',
         images: '.reading-detail .page-chapter > img'

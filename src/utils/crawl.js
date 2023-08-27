@@ -1,74 +1,18 @@
 const { regexUrl } = require("../utils/url");
 const config = require("../config/config");
 const { downloadImage, initImageStorage } = require("../utils/images");
-const { insertChapter, updateChapter, getUncrawlerChapters, updateChapters } = require("../services/ChapterService");
-const { insertStory, updateStory, updateStories, getUncrawlerStories } = require("../services/StoryService");
-const { initBrowser, getBrowser, clearBrowser, makeBrowserPending, checkAllBrowserPending } = require("../utils/browsers");
+const { insertChapter, updateChapter, updateChapters } = require("../services/ChapterService");
+const { insertStory, updateStory, updateStories, findStory } = require("../services/StoryService");
+const { makeBrowserPending } = require("../utils/browsers");
 
-let browsers = [];
 const pageSelector = config.pageSelector
 const storySelector = config.storySelector
 const chapterSelector = config.chapterSelector
 
-const crawl = async (req, res) => {
-    await initBrowser(browsers);
-    let browser = null;
-    let i = 0;
-
-    while (i++ < 1) {
-        browser = await getBrowser(browsers);
-
-        try {
-            if (browser) {
-                const pageUrl = config.host + '?page=' + i;
-                console.log(i);
-                crawlPage(browser, pageUrl, true);
-                await new Promise(resolve => setTimeout(resolve, 250));
-            } else {
-                await new Promise(resolve => setTimeout(resolve, 1000));
-            }
-        } catch (error) {
-            console.error(error);
-            break;
-        }
-    }
-
-    await checkAllBrowserPending(browsers);
-
-    let uncrawledStories = await getUncrawlerStories() || [];
-    while (uncrawledStories.length) {
-        browser = await getBrowser(browsers);
-
-        if (browser) {
-            const story = uncrawledStories.shift();
-            CrawlStory(browser, story.url, true);
-            await new Promise(resolve => setTimeout(resolve, 250));
-        } else {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-    }
-
-    await checkAllBrowserPending(browsers);
-
-    let uncrawledChapters = await getUncrawlerChapters() || [];
-    while (uncrawledChapters.length) {
-        browser = await getBrowser(browsers);
-
-        if (browser) {
-            const chapter = uncrawledChapters.shift();
-            crawlChapter(browser, chapter.url);
-            await new Promise(resolve => setTimeout(resolve, 250));
-        } else {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-    }
-
-    return true;
-}
 
 const crawlPage = async (browser, pageUrl, isNew = false) => {
     const page = await browser.browser.newPage();
-    await page.goto(pageUrl, { waitUntil: 'load', timeout: 0 });
+    await page.goto(pageUrl, { waitUntil: 'domcontentloaded', timeout: 0 });
     await page.waitForTimeout(1000);
 
     return new Promise(async (resolve, reject) => {
@@ -105,7 +49,7 @@ const crawlPage = async (browser, pageUrl, isNew = false) => {
 
 const CrawlStory = async (browser, storyUrl, isNew = false) => {
     const page = await browser.browser.newPage();
-    await page.goto(storyUrl, { waitUntil: 'load', timeout: 0 });
+    await page.goto(storyUrl, { waitUntil: 'domcontentloaded', timeout: 0 });
     await page.waitForSelector('#ctl00_divCenter');
 
     return new Promise(async (resolve, reject) => {
@@ -152,7 +96,7 @@ const CrawlStory = async (browser, storyUrl, isNew = false) => {
 
             if (!story) {
                 await makeBrowserPending(browser, page);
-                reject("Co loi xay ra");
+                reject(false);
             }
 
             const storyId = story._id;
@@ -165,24 +109,22 @@ const CrawlStory = async (browser, storyUrl, isNew = false) => {
             let chapters = isNew ? await insertChapter(data) : await updateChapters(data);
             if (!chapters) {
                 await makeBrowserPending(browser, page);
-                reject("Co loi xay ra");
+                reject(false);
             }
 
             await makeBrowserPending(browser, page);
-            resolve(true);
+            resolve(story);
         } catch (error) {
-            
             console.error(error);
             await makeBrowserPending(browser, page);
-            reject("Co loi xay ra: " + error.message);
+            reject(false);
         }
     })
 }
 
-const crawlChapter = async (browser, chapterUrl) => {
+const crawlChapter = async (browser, chapterUrl, isNew = false) => {
     const page = await browser.browser.newPage();
-    await page.goto(chapterUrl, { timeout: 0 });
-    // await page.waitForSelector('div.reading-detail.box_doc')
+    await page.goto(chapterUrl, { waitUntil: 'domcontentloaded', timeout: 0 });
     await page.waitForTimeout(1000);
 
     return new Promise(async (resolve, reject) => {
@@ -190,43 +132,75 @@ const crawlChapter = async (browser, chapterUrl) => {
             const extractedData = await page.evaluate((chapterSelector, chapterUrl) => {
                 const chap = document
                     .querySelector(chapterSelector.chap)
-                    .textContent
+                    .textContent.replace('- ', '');
 
-                const images = Array.from(
-                    document
-                        .querySelectorAll(chapterSelector.images))
+                const images = Array.from(document
+                    .querySelectorAll(chapterSelector.images))
                     .map(src => src.getAttribute("src").replace('//', 'https://'));
 
                 const url = chapterUrl;
 
-                return { chap: chap, images: images, url: url, status: 1 };
+                const storyUrl = document
+                    .querySelector(chapterSelector.storyUrl)
+                    .getAttribute('href');
+
+                return { chapter: { chap: chap, images: images, url: url, status: 1 }, storyUrl: storyUrl };
             }, chapterSelector, chapterUrl);
 
-            const chapter = await updateChapter(extractedData);
+            const chapter = await updateChapter(extractedData.chapter);
 
             if (!chapter) {
                 await makeBrowserPending(browser, page);
                 reject("Co loi xay ra");
+                return false;
             }
 
-            const dir = initImageStorage(chapter.story_id, chapter._id.toString());
+            let storyId = null;
+            if (isNew) {
+                storyId = chapter.story_id;
+            } else {
+                let story = await findStory(extractedData.storyUrl);
+                if (story == []) {
+                    story = await CrawlStory(browser, extractedData.storyUrl, true);
+                }
+
+                if (!story) {
+                    storyId = Math.random(100000000, 999999999);
+                } else {
+                    storyId = story[0]._id.toString();
+                }
+            }
+
+            const dir = initImageStorage(storyId, chapter._id.toString());
 
             let i = 0;
-            extractedData.images.forEach(url => {
+            extractedData.chapter.images.forEach(async url => {
                 if (url) {
                     const path = dir + '/' + ++i + '.jpg';
-                    downloadImage(url, path, function (err) {
-                        if (err) {
-                            console.log(err);
-                        } else {
-                            console.log('done');
+                    const isSuccess = await downloadImage(url, path, (error) => {
+                        if (error) {
+                            console.log(error);
+                            return false;
                         }
+                        return true;
                     });
+
+                    if (!isSuccess) {
+                        await downloadImage(url, path, async (error) => {
+                            if (error) {
+                                console.log(error);
+                                await makeBrowserPending(browser, page);
+                                reject("Co loi xay ra ne: " + error);
+                            } else {
+                                console.log('done');
+                            }
+                        });
+                    }
                 }
             });
 
             await makeBrowserPending(browser, page);
-            resolve(true);
+            resolve(chapter);
         } catch (error) {
             await makeBrowserPending(browser, page);
             reject("Co loi xay ra: " + error.message);
@@ -234,4 +208,4 @@ const crawlChapter = async (browser, chapterUrl) => {
     })
 };
 
-module.exports = { crawl, crawlPage, CrawlStory, crawlChapter };
+module.exports = { crawlPage, CrawlStory, crawlChapter };

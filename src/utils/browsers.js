@@ -17,15 +17,15 @@ const initBrowser = async (browsers) => {
                 '--media-cache-size=0',
                 '--disk-cache-size=0',
 
-                '--disable-extensions',
-                '--disable-component-extensions-with-background-pages',
-                '--disable-default-apps',
-                '--mute-audio',
-                '--no-default-browser-check',
-                '--autoplay-policy=user-gesture-required',
-                '--disable-background-timer-throttling',
-                '--disable-backgrounding-occluded-windows',
-                '--disable-notifications',
+                // '--disable-extensions',
+                // '--disable-component-extensions-with-background-pages',
+                // '--disable-default-apps',
+                // '--mute-audio',
+                // '--no-default-browser-check',
+                // '--autoplay-policy=user-gesture-required',
+                // '--disable-background-timer-throttling',
+                // '--disable-backgrounding-occluded-windows',
+                // '--disable-notifications',
                 // '--disable-background-networking',
                 // '--disable-breakpad',
                 // '--disable-component-update',
@@ -55,16 +55,17 @@ const getBrowser = async (browsers) => {
 
 const clearBrowser = async (browsers) => {
     for (const browser of browsers) {
-        let tabLength = await (await browser.browser.pages()).length
+        const br = browser.browser
+        let tabLength = await (await br.pages()).length
         while (tabLength > 1) {
             await new Promise(resolve => setTimeout(resolve, 2000));
-            tabLength = await (await browser.browser.pages()).length
+            tabLength = await (await br.pages()).length
         }
-        browser.browser.close();
+        br.close();
     }
 }
 
-const checkAllBrowserPending = async (browsers) => {
+const checkPendingBrowsers = async (browsers) => {
     for (const browser of browsers) {
         let tabLength = await (await browser.browser.pages()).length
         while (tabLength > 1) {
@@ -80,4 +81,4 @@ const makeBrowserPending = async (browser, page) => {
     return true;
 }
 
-module.exports = { initBrowser, getBrowser, clearBrowser, makeBrowserPending, checkAllBrowserPending }
+module.exports = { initBrowser, getBrowser, clearBrowser, makeBrowserPending, checkPendingBrowsers }
