@@ -49,11 +49,6 @@ const crawlPage = async (browser, pageUrl, isNew = false) => {
 const CrawlStory = async (browser, storyUrl, isNew = false) => {
     const page = await browser.browser.newPage();
     await page.goto(storyUrl, { waitUntil: 'domcontentloaded', timeout: 0 });
-    await Promise.all([
-        page.waitForNavigation('#challenge-stage > div > label > input[type=checkbox]', { timeout: 300000 }),
-        // page.click('#challenge-stage > div > label > input[type=checkbox]', { timeout: 30000 }),
-    ]);
-
     await page.waitForSelector('#ctl00_divCenter');
 
     return new Promise(async (resolve, reject) => {
@@ -128,24 +123,40 @@ const CrawlStory = async (browser, storyUrl, isNew = false) => {
 
 const crawlChapter = async (browser, chapterUrl, isNew = false) => {
     const page = await browser.browser.newPage();
-    await page.goto(chapterUrl, { waitUntil: 'domcontentloaded', timeout: 0 });
-    // await Promise.all([
-    //     page.waitForNavigation('#challenge-stage > div > label > input[type=checkbox]', { timeout: 300000 }),
-    //     page.click('#challenge-stage > div > label > input[type=checkbox]'),
-    // ])
-    await page.waitForTimeout(1000);
+    try {
+        await page.goto(chapterUrl, { waitUntil: 'domcontentloaded', timeout: 0 });
+        // await page.waitForTimeout(1000);
+        await page.waitForSelector('#ctl00_divCenter > div > div.reading-detail.box_doc');
+    } catch (error) {
+        console.log(error + ' loi selector');
+        await makeBrowserPending(browser, page);
+    }
 
     return new Promise(async (resolve, reject) => {
         try {
-            const extractedData = await page.evaluate((chapterSelector, chapterUrl) => {
-                const chap = document
+            await page.exposeFunction("regexUrl", regexUrl);
+            const extractedData = await page.evaluate(async (chapterSelector, chapterUrl) => {
+                const chap = await document
                     .querySelector(chapterSelector.chap)
-                    .textContent
-                    .replace('- ', '');
+                    .textContent || "- Null"
+                        .replace('- ', '');
 
                 const images = Array.from(document
                     .querySelectorAll(chapterSelector.images))
-                    .map(src => src.getAttribute("src").replace('//', 'https://'));
+                    .map(src => {
+                        let attr = src.getAttribute("src");
+                        if (attr.startsWith('//')) {
+                            attr = attr.replace('//', '');
+                        }
+                        if (attr.startsWith('http://')) {
+                            attr = attr.replace('http://', 'https://');
+                        }
+
+                        if (!attr.startsWith('https://')) {
+                            attr = 'https://' + attr;
+                        }
+                        return attr;
+                    });
 
                 const url = chapterUrl;
 
@@ -185,26 +196,12 @@ const crawlChapter = async (browser, chapterUrl, isNew = false) => {
             extractedData.chapter.images.forEach(async url => {
                 if (url) {
                     const path = dir + '/' + ++i + '.jpg';
-                    const isSuccess = await downloadImage(url, path, (error) => {
+                    await downloadImage(url, path, (error) => {
                         if (error) {
                             console.log(error);
-                            return false;
                         }
-                        return true;
                     });
-
-                    if (!isSuccess) {
-                        await downloadImage(url, path, async (error) => {
-                            if (error) {
-                                console.log(error);
-                                await makeBrowserPending(browser, page);
-                                reject("Co loi xay ra ne: " + error);
-                            } else {
-                                console.log('done');
-                            }
-                        });
-                    }
-                }
+                };
             });
 
             await makeBrowserPending(browser, page);

@@ -3,9 +3,12 @@ const axios = require('axios');
 const config = require('../config/config');
 
 const options = {
-    headers: { referer: config.nettruyenHost },
-    responseType: 'arraybuffer',
-    timeout: 120000,
+    headers: {
+        referer: config.nettruyenHost
+    },
+    responseType: 'stream',
+    // responseType: 'arraybuffer',
+    timeout: 0,
     maxContentLength: Infinity,
     maxBodyLength: Infinity
 };
@@ -33,17 +36,25 @@ const downloadImage = async (url, destination, callback) => {
     try {
         const response = await axios.get(url, options);
 
-        fs.writeFile(destination, response.data, (error) => {
-            if (error) {
-                callback(`Đã xảy ra lỗi khi tải ảnh ${destination} : ${error}`);
-            } else {
-                callback(`Ảnh ${destination} đã được tải về thành công!`);
-            }
+        // fs.writeFile(destination, response.data, (error) => {
+        //     if (error) {
+        //         callback(`Đã xảy ra lỗi khi tải ảnh ${destination} : ${error}`);
+        //     } else {
+        //         callback(`Ảnh ${destination} đã được tải về thành công!`);
+        //     }
+        // });
+        const writer = fs.createWriteStream(destination);
+        response.data.pipe(writer);
+        writer.on('finish', () => {
+            callback(`Ảnh ${url} đã được tải về thành công!`);
+        });
+        writer.on('error', (error) => {
+            callback(`Đã xảy ra lỗi khi tải ảnh ${url} : ${error}`);
         });
 
         return true;
     } catch (error) {
-        callback(`Đã xảy ra lỗi khi tải ảnh ${destination} : ${error}`);
+        callback(`Đã xảy ra lỗi khi tải ảnh ${url} : ${error}`);
 
         return false;
     }

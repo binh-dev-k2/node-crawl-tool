@@ -15,7 +15,7 @@ const crawl = async (req, res) => {
     let browser = null;
     let i = 0;
 
-    while (startPage++ < endPage) {
+    while (startPage++ <= endPage) {
         browser = await getBrowser(browsers);
 
         try {

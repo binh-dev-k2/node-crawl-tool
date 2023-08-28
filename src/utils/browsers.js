@@ -1,10 +1,14 @@
 const puppeteer = require("puppeteer-extra");
+const pluginStealth = require("puppeteer-extra-plugin-stealth");
+const { executablePath } = require("puppeteer");
 const config = require("../config/config");
-require('dotenv').config();
+
 
 const initBrowser = async (browsers) => {
+    puppeteer.use(pluginStealth());
     for (let i = 1; i <= JSON.parse(config.numberBrowser); i++) {
         const browser = await puppeteer.launch({
+            executablePath: executablePath(),
             headless: JSON.parse(config.headless),
             args: [
                 "--no-sandbox",

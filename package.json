@@ -17,7 +17,8 @@
         "mongoose": "^7.4.3",
         "mysql": "^2.18.1",
         "puppeteer": "^21.1.0",
-        "puppeteer-extra": "^3.3.6"
+        "puppeteer-extra": "^3.3.6",
+        "puppeteer-extra-plugin-stealth": "^2.11.2"
     },
     "devDependencies": {
         "morgan": "^1.10.0",
