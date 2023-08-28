@@ -18,8 +18,8 @@ const initBrowser = async (browsers) => {
                 '--media-cache-size=0',
                 '--disk-cache-size=0',
 
-                '--disable-extensions',
-                '--disable-component-extensions-with-backg.round-pages',
+                // '--disable-extensions',
+                // '--disable-component-extensions-with-backg.round-pages',
                 // '--disable-default-apps',
                 // '--mute-audio',
                 // '--no-default-browser-check',
