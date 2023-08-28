@@ -3,9 +3,9 @@ const axios = require('axios');
 const config = require('../config/config');
 
 const options = {
-    headers: { referer: config.host },
+    headers: { referer: config.nettruyenHost },
     responseType: 'arraybuffer',
-    timeout: 30000,
+    timeout: 120000,
     maxContentLength: Infinity,
     maxBodyLength: Infinity
 };

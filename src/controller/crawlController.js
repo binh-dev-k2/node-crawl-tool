@@ -20,7 +20,7 @@ const crawl = async (req, res) => {
 
         try {
             if (browser) {
-                const pageUrl = config.host + '?page=' + i;
+                const pageUrl = config.nettruyenHost + '?page=' + startPage;
                 crawlPage(browser, pageUrl, true);
                 await new Promise(resolve => setTimeout(resolve, 250));
             } else {

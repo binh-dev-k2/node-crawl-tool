@@ -1,23 +1,21 @@
 const express = require('express');
 const route = require('./src/routes/route');
 const mongoose = require('mongoose');
-const config = require('./src/config/config')
 const morgan = require("morgan");
-const mysql = require('mysql');
+const config = require('./src/config/config');
 
-const mongoConfig = config.mongodb
-const mongodb = `mongodb://${mongoConfig.host}:${mongoConfig.port}/${mongoConfig.name}`;
+
+const mongodb = `mongodb://${config.mongodb.host}:${config.mongodb.port}/${config.mongodb.name}`;
 
 mongoose.connect(mongodb, { useNewUrlParser: true, useUnifiedTopology: true })
     .then(() => console.log('MongoDB connected!!!'))
     .catch((err) => console.log(err));
 
-// const mysqlConfig = config.mysql
 // const con = mysql.createConnection({
-//     host: mysqlConfig.host,
-//     user: mysqlConfig.user,
-//     password: mysqlConfig.password,
-//     database: mysqlConfig.database
+//     host: mysql.host,
+//     user: mysql.user,
+//     password: mysql.password,
+//     database: mysql.name
 // });
 
 // con.connect(function (err) {
@@ -34,6 +32,6 @@ if (config.process == "development") {
     app.use(morgan("dev"));
 }
 
-app.use("/api/crawl", route);
+app.use("/api", route);
 
 module.exports = app

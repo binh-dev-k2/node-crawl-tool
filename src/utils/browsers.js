@@ -1,10 +1,11 @@
 const puppeteer = require("puppeteer-extra");
 const config = require("../config/config");
+require('dotenv').config();
 
 const initBrowser = async (browsers) => {
-    for (let i = 1; i <= config.numberBrowser; i++) {
+    for (let i = 1; i <= JSON.parse(config.numberBrowser); i++) {
         const browser = await puppeteer.launch({
-            headless: config.headless,
+            headless: JSON.parse(config.headless),
             args: [
                 "--no-sandbox",
                 '--disable-features=site-per-process',
@@ -17,8 +18,8 @@ const initBrowser = async (browsers) => {
                 '--media-cache-size=0',
                 '--disk-cache-size=0',
 
-                // '--disable-extensions',
-                // '--disable-component-extensions-with-background-pages',
+                '--disable-extensions',
+                '--disable-component-extensions-with-backg.round-pages',
                 // '--disable-default-apps',
                 // '--mute-audio',
                 // '--no-default-browser-check',
@@ -45,7 +46,7 @@ const getBrowser = async (browsers) => {
 
     for (const browser of browsers) {
         const pages = await browser.browser.pages();
-        if (pages.length <= config.numberBrowser && pages.length < minPagesLength) {
+        if (pages.length <= JSON.parse(config.numberBrowser) && pages.length < minPagesLength) {
             minPagesLength = pages.length;
             minPagesBrowser = browser;
         }

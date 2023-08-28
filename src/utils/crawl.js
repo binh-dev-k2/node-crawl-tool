@@ -1,14 +1,13 @@
 const { regexUrl } = require("../utils/url");
-const config = require("../config/config");
 const { downloadImage, initImageStorage } = require("../utils/images");
 const { insertChapter, updateChapter, updateChapters } = require("../services/ChapterService");
 const { insertStory, updateStory, updateStories, findStory } = require("../services/StoryService");
 const { makeBrowserPending } = require("../utils/browsers");
+const config = require("../config/config");
 
 const pageSelector = config.pageSelector
-const storySelector = config.storySelector
-const chapterSelector = config.chapterSelector
-
+const storySelector = config.storySelector;
+const chapterSelector = config.chapterSelector;
 
 const crawlPage = async (browser, pageUrl, isNew = false) => {
     const page = await browser.browser.newPage();
@@ -50,6 +49,11 @@ const crawlPage = async (browser, pageUrl, isNew = false) => {
 const CrawlStory = async (browser, storyUrl, isNew = false) => {
     const page = await browser.browser.newPage();
     await page.goto(storyUrl, { waitUntil: 'domcontentloaded', timeout: 0 });
+    await Promise.all([
+        page.waitForNavigation('#challenge-stage > div > label > input[type=checkbox]', { timeout: 300000 }),
+        // page.click('#challenge-stage > div > label > input[type=checkbox]', { timeout: 30000 }),
+    ]);
+
     await page.waitForSelector('#ctl00_divCenter');
 
     return new Promise(async (resolve, reject) => {
@@ -119,20 +123,25 @@ const CrawlStory = async (browser, storyUrl, isNew = false) => {
             await makeBrowserPending(browser, page);
             reject(false);
         }
-    })
+    });
 }
 
 const crawlChapter = async (browser, chapterUrl, isNew = false) => {
     const page = await browser.browser.newPage();
     await page.goto(chapterUrl, { waitUntil: 'domcontentloaded', timeout: 0 });
-    await page.waitForTimeout(1000);
+    // await Promise.all([
+    //     page.waitForNavigation('#challenge-stage > div > label > input[type=checkbox]', { timeout: 300000 }),
+    //     page.click('#challenge-stage > div > label > input[type=checkbox]'),
+    // ])
+    // await page.waitForTimeout(1000);
 
     return new Promise(async (resolve, reject) => {
         try {
             const extractedData = await page.evaluate((chapterSelector, chapterUrl) => {
                 const chap = document
                     .querySelector(chapterSelector.chap)
-                    .textContent.replace('- ', '');
+                    .textContent
+                    .replace('- ', '');
 
                 const images = Array.from(document
                     .querySelectorAll(chapterSelector.images))
