@@ -133,7 +133,7 @@ const crawlChapter = async (browser, chapterUrl, isNew = false) => {
     //     page.waitForNavigation('#challenge-stage > div > label > input[type=checkbox]', { timeout: 300000 }),
     //     page.click('#challenge-stage > div > label > input[type=checkbox]'),
     // ])
-    // await page.waitForTimeout(1000);
+    await page.waitForTimeout(1000);
 
     return new Promise(async (resolve, reject) => {
         try {
