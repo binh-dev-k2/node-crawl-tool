@@ -58,10 +58,21 @@ const CrawlStory = async (browser, storyUrl, isNew = false) => {
                     .querySelector(storySelector.title)
                     .textContent;
 
-                const thumbnail = document
+                let thumbnail = document
                     .querySelector(storySelector.thumbnail)
                     .getAttribute("src")
-                    .replace("//", "https://");
+
+                if (thumbnail.startsWith('//')) {
+                    thumbnail = thumbnail.replace('//', '');
+                }
+
+                if (thumbnail.startsWith('http://')) {
+                    thumbnail = thumbnail.replace('http://', 'https://');
+                }
+
+                if (!thumbnail.startsWith('https://')) {
+                    thumbnail = 'https://' + thumbnail;
+                }
 
                 const author = document
                     .querySelector(storySelector.author)
@@ -126,7 +137,7 @@ const crawlChapter = async (browser, chapterUrl, isNew = false) => {
     try {
         await page.goto(chapterUrl, { waitUntil: 'domcontentloaded', timeout: 0 });
         // await page.waitForTimeout(1000);
-        await page.waitForSelector('#ctl00_divCenter > div > div.reading-detail.box_doc');
+        await page.waitForSelector(config.chapterSelector.images);
     } catch (error) {
         console.log(error + ' loi selector');
         await makeBrowserPending(browser, page);

@@ -35,7 +35,6 @@ const config = {
     chapterSelector: {
         storyUrl: env.CHAPTER_STORY_URL,
         container: env.CHAPTER_CONTAINER,
-        // chap: '#ctl00_divCenter > div > div:nth-child(1) > div.top > h1 > span',
         chap: env.CHAPTER_CHAP,
         images: env.CHAPTER_IMAGES
     }
