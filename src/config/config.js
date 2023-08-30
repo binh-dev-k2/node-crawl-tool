@@ -21,12 +21,14 @@ const config = {
     headless: env.HEADLESS,
     numberBrowser: env.NUMBER_BROWSER,
     process: env.NODE_ENV,
-    nettruyenHost: env.NETTRUYEN_HOST,
+    webHost: env.WEB_HOST,
     pageSelector: {
+        waited: env.PAGE_WAITED,
         container: env.PAGE_CONTAINER,
-        url: env.PAGE_URL
+        storyUrl: env.STORY_URL
     },
     storySelector: {
+        waited: env.STORY_WAITED,
         title: env.STORY_TITLE,
         thumbnail: env.STORY_THUMBNAIL,
         author: env.STORY_AUTHOR,

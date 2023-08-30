@@ -3,24 +3,27 @@ const pluginStealth = require("puppeteer-extra-plugin-stealth");
 const { executablePath } = require("puppeteer");
 const config = require("../config/config");
 
-
 const initBrowser = async (browsers) => {
     puppeteer.use(pluginStealth());
     for (let i = 1; i <= JSON.parse(config.numberBrowser); i++) {
         const browser = await puppeteer.launch({
             executablePath: executablePath(),
             headless: JSON.parse(config.headless),
+            // devtools: true,
             args: [
                 "--no-sandbox",
                 '--disable-features=site-per-process',
 
-                '--aggressive-cache-discard',
-                '--disable-cache',
-                '--disable-application-cache',
-                '--disable-offline-load-stale-cache',
-                '--disable-gpu-shader-disk-cache',
-                '--media-cache-size=0',
-                '--disk-cache-size=0',
+                '--disable-web-security',
+                '--ignore-certificate-errors',
+
+                // '--aggressive-cache-discard',
+                // '--disable-cache',
+                // '--disable-application-cache',
+                // '--disable-offline-load-stale-cache',
+                // '--disable-gpu-shader-disk-cache',
+                // '--media-cache-size=0',
+                // '--disk-cache-size=0',
 
                 // '--disable-extensions',
                 // '--disable-component-extensions-with-backg.round-pages',
@@ -55,6 +58,7 @@ const getBrowser = async (browsers) => {
             minPagesBrowser = browser;
         }
     }
+
     return minPagesBrowser || false;
 }
 

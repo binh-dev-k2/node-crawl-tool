@@ -11,7 +11,9 @@ const insertStory = async (story) => {
 
 const insertStories = async (stories) => {
     try {
-        await Story.insertMany(stories);
+        for (const story of stories) {
+            await insertStory(story);
+        }
         return true;
     } catch (error) {
         console.error(error);
@@ -21,7 +23,7 @@ const insertStories = async (stories) => {
 
 const updateStory = async (story) => {
     const query = { url: story.url };
-
+    console.log(story);
     const options = { upsert: true, new: true, setDefaultsOnInsert: true };
 
     try {

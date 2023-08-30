@@ -1,9 +1,11 @@
 const { regexUrl } = require("../utils/url");
 const { downloadImage, initImageStorage } = require("../utils/images");
 const { insertChapter, updateChapter, updateChapters } = require("../services/ChapterService");
-const { insertStory, updateStory, updateStories, findStory } = require("../services/StoryService");
+const { insertStory, updateStory, updateStories, findStory, insertStories } = require("../services/StoryService");
 const { makeBrowserPending } = require("../utils/browsers");
 const config = require("../config/config");
+const useProxy = require('puppeteer-page-proxy');
+
 
 const pageSelector = config.pageSelector
 const storySelector = config.storySelector;
@@ -11,25 +13,37 @@ const chapterSelector = config.chapterSelector;
 
 const crawlPage = async (browser, pageUrl, isNew = false) => {
     const page = await browser.browser.newPage();
-    await page.goto(pageUrl, { waitUntil: 'domcontentloaded', timeout: 0 });
-    await page.waitForTimeout(1000);
+    try {
+        // await useProxy(page, 'socks4://43.153.99.33:1080');
+        await page.goto(pageUrl, { waitUntil: 'domcontentloaded', timeout: 0 });
+        await page.waitForSelector(pageSelector.waited);
+    } catch (error) {
+        console.log(error);
+        await makeBrowserPending(browser, page);
+        return false;
+    };
 
     return new Promise(async (resolve, reject) => {
         try {
-            const extractedData = await page.evaluate((pageSelector) => {
+            const extractedData = await page.evaluate((pageSelector, config) => {
                 const stories = Array
                     .from(document.querySelectorAll(pageSelector.container))
                     .map(story => {
+                        let href = story.getAttribute('href');
+                        while (!href.startsWith('http') || !href.startsWith('https')) {
+                            href = config.webHost + href
+                        }
+
                         return {
-                            url: story.querySelector(pageSelector.url).getAttribute('href'),
+                            url: href,
                             status: 0
                         }
                     });
 
                 return stories;
-            }, pageSelector);
+            }, pageSelector, config);
 
-            const stories = isNew ? await updateStories(extractedData) : await updateStories(extractedData);
+            const stories = isNew ? await insertStories(extractedData) : await updateStories(extractedData);
 
             if (!stories) {
                 await makeBrowserPending(browser, page);
@@ -48,22 +62,31 @@ const crawlPage = async (browser, pageUrl, isNew = false) => {
 
 const CrawlStory = async (browser, storyUrl, isNew = false) => {
     const page = await browser.browser.newPage();
-    await page.goto(storyUrl, { waitUntil: 'domcontentloaded', timeout: 0 });
-    await page.waitForSelector('#ctl00_divCenter');
+
+    try {
+        await page.goto(storyUrl, { waitUntil: 'domcontentloaded', timeout: 0 });
+        await page.waitForSelector(storySelector.waited);
+        await page.waitForTimeout(2000);
+    } catch (error) {
+        console.log(error);
+        await makeBrowserPending(browser, page);
+        return false;
+    }
 
     return new Promise(async (resolve, reject) => {
         try {
             const extractedData = await page.evaluate((storyUrl, storySelector, chapterSelector) => {
-                const title = document
+                let title = document
                     .querySelector(storySelector.title)
-                    .textContent;
+
+                title = title ? title.textContent : "NULL";
 
                 let thumbnail = document
                     .querySelector(storySelector.thumbnail)
-                    .getAttribute("src")
+                    .getAttribute("src") || "NULL";
 
-                if (thumbnail.startsWith('//')) {
-                    thumbnail = thumbnail.replace('//', '');
+                while (thumbnail.startsWith('/')) {
+                    thumbnail = thumbnail.replace('/', '');
                 }
 
                 if (thumbnail.startsWith('http://')) {
@@ -74,11 +97,12 @@ const CrawlStory = async (browser, storyUrl, isNew = false) => {
                     thumbnail = 'https://' + thumbnail;
                 }
 
-                const author = document
-                    .querySelector(storySelector.author)
-                    .textContent;
+                const author = "NULL";
 
-                const description = storySelector.description;
+                let description = document
+                    .querySelector(storySelector.description)
+
+                description = description ? description.textContent : "Null";
 
                 const chapters = Array
                     .from(document.querySelectorAll(chapterSelector.container))
@@ -137,15 +161,15 @@ const crawlChapter = async (browser, chapterUrl, isNew = false) => {
     try {
         await page.goto(chapterUrl, { waitUntil: 'domcontentloaded', timeout: 0 });
         // await page.waitForTimeout(1000);
-        await page.waitForSelector(config.chapterSelector.images);
+        await page.waitForSelector(chapterSelector.images);
     } catch (error) {
         console.log(error + ' loi selector');
         await makeBrowserPending(browser, page);
+        return false;
     }
 
     return new Promise(async (resolve, reject) => {
         try {
-            await page.exposeFunction("regexUrl", regexUrl);
             const extractedData = await page.evaluate(async (chapterSelector, chapterUrl) => {
                 const chap = await document
                     .querySelector(chapterSelector.chap)
@@ -155,17 +179,19 @@ const crawlChapter = async (browser, chapterUrl, isNew = false) => {
                 const images = Array.from(document
                     .querySelectorAll(chapterSelector.images))
                     .map(src => {
-                        let attr = src.getAttribute("src");
-                        if (attr.startsWith('//')) {
-                            attr = attr.replace('//', '');
+                        let attr = src.getAttribute("data-z");
+                        while (attr.startsWith('/')) {
+                            attr = attr.replace('/', '');
                         }
+
                         if (attr.startsWith('http://')) {
-                            attr = attr.replace('http://', 'https://');
+                            attr = attr.replace('http://', 'https://cm.cloudblaze.org/');
                         }
 
                         if (!attr.startsWith('https://')) {
-                            attr = 'https://' + attr;
+                            attr = 'https://cm.cloudblaze.org/' + attr;
                         }
+
                         return attr;
                     });
 
@@ -188,18 +214,19 @@ const crawlChapter = async (browser, chapterUrl, isNew = false) => {
             let storyId = null;
             if (isNew) {
                 storyId = chapter.story_id;
-            } else {
-                let story = await findStory(extractedData.storyUrl);
-                if (story == []) {
-                    story = await CrawlStory(browser, extractedData.storyUrl, true);
-                }
-
-                if (!story) {
-                    storyId = Math.random(100000000, 999999999);
-                } else {
-                    storyId = story[0]._id.toString();
-                }
             }
+            // else {
+            //     let story = await findStory(extractedData.storyUrl);
+            //     if (story == []) {
+            //         story = await CrawlStory(browser, extractedData.storyUrl, true);
+            //     }
+
+            //     if (!story) {
+            //         storyId = Math.random(100000000, 999999999);
+            //     } else {
+            //         storyId = story[0]._id.toString();
+            //     }
+            // }
 
             const dir = initImageStorage(storyId, chapter._id.toString());
 

@@ -4,7 +4,7 @@ const config = require('../config/config');
 
 const options = {
     headers: {
-        referer: config.nettruyenHost
+        referer: config.webHost
     },
     responseType: 'stream',
     // responseType: 'arraybuffer',

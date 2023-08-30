@@ -6,6 +6,59 @@ const { crawlPage, CrawlStory, crawlChapter } = require("../utils/crawl");
 
 let browsers = [];
 
+const crawlllll = async (req, res) => {
+    await initBrowser(browsers);
+    let browser = null;
+
+    try {
+        let pageUrl = 'https://mangaraw.to';
+        browser = await getBrowser(browsers);
+        if (browser) {
+            crawlPage(browser, pageUrl, true);
+            await new Promise(resolve => setTimeout(resolve, 250));
+        } else {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+    } catch (error) {
+        console.error(error);
+    }
+
+    await checkPendingBrowsers(browsers);
+
+    let uncrawledStories = await getUncrawledStories() || [];
+    while (uncrawledStories.length) {
+        browser = await getBrowser(browsers);
+
+        if (browser) {
+            const story = uncrawledStories.shift();
+            CrawlStory(browser, story.url, true);
+            await new Promise(resolve => setTimeout(resolve, 250));
+        } else {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+    }
+
+    await checkPendingBrowsers(browsers);
+
+    let uncrawledChapters = await getUncrawledChapters() || [];
+    while (uncrawledChapters.length) {
+        browser = await getBrowser(browsers);
+
+        if (browser) {
+            const chapter = uncrawledChapters.shift();
+            crawlChapter(browser, chapter.url);
+            await new Promise(resolve => setTimeout(resolve, 250));
+        } else {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+    }
+
+    await clearBrowser(browsers);
+
+    return true;
+
+};
+
 const crawl = async (req, res) => {
     const data = await req.body;
     let startPage = data.startPage || 0;
@@ -129,4 +182,4 @@ const crawlChapters = async (req, res) => {
     return true;
 };
 
-module.exports = { crawl, crawlStories, crawlChapters };
+module.exports = { crawl, crawlStories, crawlChapters, crawlllll };
