@@ -1,9 +1,10 @@
 const { regexUrl } = require("../utils/url");
-const { downloadImage, initImageStorage } = require("../utils/images");
-const { insertChapter, updateChapter, updateChapters } = require("../services/ChapterService");
-const { insertStory, updateStory, updateStories, findStory } = require("../services/StoryService");
+const { downloadImage, initImageStorage, downloadImages } = require("../utils/images");
+const { updateChapter, updateChapters, insertChapters, insertChapter } = require("../services/ChapterService");
+const { insertStory, updateStory, updateStories, findStory, insertStories } = require("../services/StoryService");
 const { makeBrowserPending } = require("../utils/browsers");
 const config = require("../config/config");
+let userAgent = require('user-agents');
 
 const pageSelector = config.pageSelector
 const storySelector = config.storySelector;
@@ -11,32 +12,57 @@ const chapterSelector = config.chapterSelector;
 
 const crawlPage = async (browser, pageUrl, isNew = false) => {
     const page = await browser.browser.newPage();
-    await page.goto(pageUrl, { waitUntil: 'domcontentloaded', timeout: 0 });
-    await page.waitForTimeout(1000);
+    // await page.setUserAgent(userAgent.random().toString());
+    await page.setRequestInterception(true);
+
+    page.on('request', (req) => {
+        if (
+            req.resourceType() === 'image'
+            || req.resourceType() === 'stylesheet'
+            || req.resourceType() === 'font'
+            || req.resourceType() === 'script'
+        ) {
+            req.abort();
+        }
+        else {
+            req.continue();
+        }
+    });
+
+    try {
+        await page.goto(pageUrl, { waitUntil: ['domcontentloaded', 'networkidle2'], timeout: 0 });
+        await page.waitForSelector(pageSelector.storyContainer);
+    } catch (error) {
+        console.error(error);
+        await makeBrowserPending(browser, page);
+        return false;
+    }
 
     return new Promise(async (resolve, reject) => {
         try {
-            const extractedData = await page.evaluate((pageSelector) => {
-                const stories = Array
-                    .from(document.querySelectorAll(pageSelector.container))
-                    .map(story => {
+            const extractedData = await page.evaluate(async (pageSelector) => {
+                const pageContainer = document.querySelector(pageSelector.storyContainer);
+                const listStories = Array.from(pageContainer.querySelectorAll(`${pageSelector.storyItem} ${pageSelector.storyUrl}`));
+                const stories = await Promise.all(
+                    listStories.map(async (item) => {
+                        const url = item.getAttribute('href') || "null";
                         return {
-                            url: story.querySelector(pageSelector.url).getAttribute('href'),
+                            url: url,
                             status: 0
                         }
-                    });
+                    })
+                );
 
                 return stories;
             }, pageSelector);
 
             const stories = isNew ? await updateStories(extractedData) : await updateStories(extractedData);
 
+            await makeBrowserPending(browser, page);
             if (!stories) {
-                await makeBrowserPending(browser, page);
                 reject(false);
             }
 
-            await makeBrowserPending(browser, page);
             resolve(true);
         } catch (error) {
             console.error(error);
@@ -44,45 +70,59 @@ const crawlPage = async (browser, pageUrl, isNew = false) => {
             reject(false);
         }
     });
-}
+};
 
 const CrawlStory = async (browser, storyUrl, isNew = false) => {
     const page = await browser.browser.newPage();
-    await page.goto(storyUrl, { waitUntil: 'domcontentloaded', timeout: 0 });
-    await page.waitForSelector('#ctl00_divCenter');
+    // await page.setUserAgent(userAgent.random().toString());
+    await page.setRequestInterception(true);
+
+    page.on('request', (req) => {
+        if (
+            req.resourceType() === 'image'
+            || req.resourceType() === 'stylesheet'
+            || req.resourceType() === 'font'
+            || req.resourceType() === 'script'
+        ) {
+            req.abort();
+        }
+        else {
+            req.continue();
+        }
+    });
+
+    try {
+        await page.goto(storyUrl, { waitUntil: ['domcontentloaded', 'networkidle2'], timeout: 0 });
+        await page.waitForSelector(storySelector.chapterContainer);
+        await page.exposeFunction("regexUrl", regexUrl);
+    } catch (error) {
+        console.error(error);
+        await makeBrowserPending(browser, page);
+        return false;
+    }
 
     return new Promise(async (resolve, reject) => {
         try {
-            const extractedData = await page.evaluate((storyUrl, storySelector, chapterSelector) => {
-                const title = document
-                    .querySelector(storySelector.title)
-                    .textContent;
+            const extractedData = await page.evaluate(async (storyUrl, storySelector) => {
+                const title = (document.querySelector(storySelector.title))?.textContent || "null";
+                const author = (document.querySelector(storySelector.author))?.textContent || "null";
+                const thumbnail = (document.querySelector(storySelector.thumbnail))?.getProperty("src") || "null";
+                await window.regexUrl(thumbnail);
+                let description = storySelector.description;
 
-                let thumbnail = document
-                    .querySelector(storySelector.thumbnail)
-                    .getAttribute("src")
-
-                if (thumbnail.startsWith('//')) {
-                    thumbnail = thumbnail.replace('//', '');
-                }
-
-                if (thumbnail.startsWith('http://')) {
-                    thumbnail = thumbnail.replace('http://', 'https://');
-                }
-
-                if (!thumbnail.startsWith('https://')) {
-                    thumbnail = 'https://' + thumbnail;
-                }
-
-                const author = document
-                    .querySelector(storySelector.author)
-                    .textContent;
-
-                const description = storySelector.description;
-
-                const chapters = Array
-                    .from(document.querySelectorAll(chapterSelector.container))
-                    .map(href => href.getAttribute("href"));
+                const storyContainer = document.querySelector(storySelector.chapterContainer);
+                const listChapters = Array.from(storyContainer.querySelectorAll(`${storySelector.chapterItem} ${storySelector.chapterUrl}`));
+                const chapters = await Promise.all(
+                    listChapters.map(async (item) => {
+                        const chap = item.textContent;
+                        const href = item.getAttribute("href") || "null";
+                        const url = await window.regexUrl(href) || "null";
+                        return {
+                            chap: chap,
+                            url: url
+                        };
+                    })
+                );
 
                 const url = storyUrl;
 
@@ -97,12 +137,9 @@ const CrawlStory = async (browser, storyUrl, isNew = false) => {
                     },
                     chapters: chapters
                 };
+            }, storyUrl, storySelector);
 
-            }, storyUrl, storySelector, chapterSelector);
-
-            const story = isNew
-                ? await insertStory(extractedData.story)
-                : await updateStory(extractedData.story);
+            const story = isNew ? await insertStory(extractedData.story) : await updateStory(extractedData.story);
 
             if (!story) {
                 await makeBrowserPending(browser, page);
@@ -110,19 +147,22 @@ const CrawlStory = async (browser, storyUrl, isNew = false) => {
             }
 
             const storyId = story._id;
-            const data = extractedData.chapters.map(url => ({
-                url: url,
-                story_id: storyId,
-                status: 0,
-            }));
+            const data = extractedData.chapters.map(chapter => {
+                return {
+                    chap: chapter.chap,
+                    url: chapter.url,
+                    story_id: storyId,
+                    status: 0,
+                }
+            });
 
-            let chapters = isNew ? await insertChapter(data) : await updateChapters(data);
+            const chapters = isNew ? await insertChapters(data) : await updateChapters(data);
+
+            await makeBrowserPending(browser, page);
             if (!chapters) {
-                await makeBrowserPending(browser, page);
                 reject(false);
             }
 
-            await makeBrowserPending(browser, page);
             resolve(story);
         } catch (error) {
             console.error(error);
@@ -130,55 +170,60 @@ const CrawlStory = async (browser, storyUrl, isNew = false) => {
             reject(false);
         }
     });
-}
+};
 
 const crawlChapter = async (browser, chapterUrl, isNew = false) => {
     const page = await browser.browser.newPage();
+    // await page.setUserAgent(userAgent.random().toString());
+    await page.setRequestInterception(true);
+
+    // page.on('request', (req) => {
+    //     if (
+    //         req.resourceType() === 'image'
+    //         // || req.resourceType() === 'stylesheet'
+    //         // || req.resourceType() === 'font'
+    //         // || req.resourceType() === 'script'
+    //     ) {
+    //         req.abort();
+    //     }
+    //     else {
+    //         req.continue();
+    //     }
+    // });
+
     try {
-        await page.goto(chapterUrl, { waitUntil: 'domcontentloaded', timeout: 0 });
-        // await page.waitForTimeout(1000);
-        await page.waitForSelector(config.chapterSelector.images);
+        await page.goto(chapterUrl, { waitUntil: ['domcontentloaded', 'networkidle2'], timeout: 0 });
+        await page.waitForSelector(`${chapterSelector.imageContainer}`);
+        await page.waitForTimeout(1000);
+        await autoScroll(page);
+        await page.exposeFunction("regexUrl", regexUrl);
+        await page.waitForTimeout(2000);
     } catch (error) {
-        console.log(error + ' loi selector');
+        console.error(error);
         await makeBrowserPending(browser, page);
+        return false;
     }
 
     return new Promise(async (resolve, reject) => {
         try {
-            await page.exposeFunction("regexUrl", regexUrl);
             const extractedData = await page.evaluate(async (chapterSelector, chapterUrl) => {
-                const chap = await document
-                    .querySelector(chapterSelector.chap)
-                    .textContent || "- Null"
-                        .replace('- ', '');
+                const chapterContainer = document.querySelector(chapterSelector.imageContainer);
+                const listImages = Array.from(chapterContainer.querySelectorAll(`${chapterSelector.imageItem} ${chapterSelector.imageUrl}`));
+                const images = await Promise.all(
+                    listImages.map(async (item) => await regexUrl(item.getAttribute('src')))
+                );
 
-                const images = Array.from(document
-                    .querySelectorAll(chapterSelector.images))
-                    .map(src => {
-                        let attr = src.getAttribute("src");
-                        if (attr.startsWith('//')) {
-                            attr = attr.replace('//', '');
-                        }
-                        if (attr.startsWith('http://')) {
-                            attr = attr.replace('http://', 'https://');
-                        }
-
-                        if (!attr.startsWith('https://')) {
-                            attr = 'https://' + attr;
-                        }
-                        return attr;
-                    });
+                let storyUrl = document.querySelector(chapterSelector.storyUrl)
+                storyUrl = storyUrl ? await window.regexUrl(storyUrl.getAttribute('href')) : "null";
 
                 const url = chapterUrl;
 
-                const storyUrl = document
-                    .querySelector(chapterSelector.storyUrl)
-                    .getAttribute('href');
-
-                return { chapter: { chap: chap, images: images, url: url, status: 1 }, storyUrl: storyUrl };
+                return { chapter: { images: images, url: url, status: 1 }, storyUrl: storyUrl };
             }, chapterSelector, chapterUrl);
 
-            const chapter = await updateChapter(extractedData.chapter);
+            const chapter = isNew
+                ? await insertChapter(extractedData.chapter)
+                : await updateChapter(extractedData.chapter);
 
             if (!chapter) {
                 await makeBrowserPending(browser, page);
@@ -190,31 +235,19 @@ const crawlChapter = async (browser, chapterUrl, isNew = false) => {
                 storyId = chapter.story_id;
             } else {
                 let story = await findStory(extractedData.storyUrl);
-                if (story == []) {
+                if (story.length === 0) {
                     story = await CrawlStory(browser, extractedData.storyUrl, true);
-                }
+                };
 
                 if (!story) {
-                    storyId = Math.random(100000000, 999999999);
+                    storyId = Math.floor(Math.random() * (999999999 - 100000000 + 1) + 100000000);
                 } else {
                     storyId = story[0]._id.toString();
-                }
-            }
+                };
+            };
 
             const dir = initImageStorage(storyId, chapter._id.toString());
-
-            let i = 0;
-            extractedData.chapter.images.forEach(async url => {
-                if (url) {
-                    const path = dir + '/' + ++i + '.jpg';
-                    await downloadImage(url, path, (error) => {
-                        if (error) {
-                            console.log(error);
-                        }
-                    });
-                };
-            });
-
+            await downloadImages(extractedData.chapter.images, dir);
             await makeBrowserPending(browser, page);
             resolve(chapter);
         } catch (error) {
@@ -224,5 +257,24 @@ const crawlChapter = async (browser, chapterUrl, isNew = false) => {
         }
     })
 };
+
+const autoScroll = async (page) => {
+    await page.evaluate(async () => {
+        await new Promise((resolve) => {
+            let totalHeight = 0;
+            let distance = 300;
+            let timer = setInterval(() => {
+                let scrollHeight = document.body.scrollHeight;
+                window.scrollBy(0, distance);
+                totalHeight += distance;
+
+                if (totalHeight >= scrollHeight - window.innerHeight) {
+                    clearInterval(timer);
+                    resolve();
+                }
+            }, 300);
+        });
+    });
+}
 
 module.exports = { crawlPage, CrawlStory, crawlChapter };

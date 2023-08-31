@@ -11,7 +11,12 @@ const insertStory = async (story) => {
 
 const insertStories = async (stories) => {
     try {
-        await Story.insertMany(stories);
+        for (const story of stories) {
+    console.log(story);
+
+            await insertStory(story);
+        }
+
         return true;
     } catch (error) {
         console.error(error);

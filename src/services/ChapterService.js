@@ -1,19 +1,27 @@
 const Chapter = require("../models/mongo/Chapter");
 
-const insertChapter = async (chapters) => {
-    try {
-        // const promises = chapters.map(async (chapter) => {
-        //     await new Chapter(chapter).save();
-        // });
-        // await Promise.all(promises);
 
-        // return true;
-        return await Chapter.insertMany(chapters);
+const insertChapter = async (chapter) => {
+    try {
+        return Chapter(chapter).save();
     } catch (error) {
         console.error(error);
         return false;
     }
 }
+
+const insertChapters = async (chapters) => {
+    try {
+        for (const chapter of chapters) {
+            await insertChapter(chapter);
+        }
+        // await Chapter.insertMany(chapters);
+        return true;
+    } catch (error) {
+        console.error(error);
+        return false;
+    }
+};
 
 const updateChapter = async (chapter) => {
     const query = { url: chapter.url };
@@ -59,4 +67,4 @@ const getUncrawledChapters = async () => {
     }
 }
 
-module.exports = { insertChapter, updateChapter, updateChapters, getUncrawledChapters, findChapters };
+module.exports = { insertChapter, insertChapters, updateChapter, updateChapters, getUncrawledChapters, findChapters };

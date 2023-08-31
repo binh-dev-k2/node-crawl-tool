@@ -58,7 +58,18 @@ const downloadImage = async (url, destination, callback) => {
 
         return false;
     }
-
 };
 
-module.exports = { initImageStorage, downloadImage }
+const downloadImages = async (urls, dir) => {
+    const promises = urls.map(async (url, index) => {
+        const path = `${dir}/${index + 1}.jpg`;
+        await downloadImage(url, path, (message) => {
+            if (message) {
+                console.log(message);
+            }
+        });
+    });
+    await Promise.all(promises);
+};
+
+module.exports = { initImageStorage, downloadImage, downloadImages }

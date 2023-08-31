@@ -23,20 +23,24 @@ const config = {
     process: env.NODE_ENV,
     nettruyenHost: env.NETTRUYEN_HOST,
     pageSelector: {
-        container: env.PAGE_CONTAINER,
-        url: env.PAGE_URL
+        storyContainer: env.PAGE_STORY_CONTAINER,
+        storyItem: env.PAGE_STORY_ITEM,
+        storyUrl: env.PAGE_STORY_URL
     },
     storySelector: {
         title: env.STORY_TITLE,
         thumbnail: env.STORY_THUMBNAIL,
         author: env.STORY_AUTHOR,
-        description: env.STORY_DESCRIPTION
+        description: env.STORY_DESCRIPTION,
+        chapterContainer: env.STORY_CHAPTER_CONTAINER,
+        chapterItem: env.STORY_CHAPTER_ITEM,
+        chapterUrl: env.STORY_CHAPTER_URL
     },
     chapterSelector: {
-        storyUrl: env.CHAPTER_STORY_URL,
-        container: env.CHAPTER_CONTAINER,
-        chap: env.CHAPTER_CHAP,
-        images: env.CHAPTER_IMAGES
+        imageContainer: env.CHAPTER_IMAGE_CONTAINER,
+        imageItem: env.CHAPTER_IMAGE_ITEM,
+        imageUrl: env.CHAPTER_IMAGE_URL,
+        storyUrl: env.CHAPTER_STORY_URL
     }
 }
 

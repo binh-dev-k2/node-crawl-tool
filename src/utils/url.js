@@ -1,4 +1,8 @@
-const regexUrl = (url) => {
+const regexUrl = async (url) => {
+    if (url.startsWith('//')) {
+        url = url.replace('//', '');
+    }
+
     if (url.startsWith('http://')) {
         url = url.replace('http://', 'https://');
     }

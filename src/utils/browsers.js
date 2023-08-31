@@ -3,6 +3,17 @@ const pluginStealth = require("puppeteer-extra-plugin-stealth");
 const { executablePath } = require("puppeteer");
 const config = require("../config/config");
 
+// Add adblocker plugin, which will transparently block ads in all pages you
+// create using puppeteer.
+const { DEFAULT_INTERCEPT_RESOLUTION_PRIORITY } = require('puppeteer')
+const AdblockerPlugin = require('puppeteer-extra-plugin-adblocker')
+puppeteer.use(
+    AdblockerPlugin({
+        // Optionally enable Cooperative Mode for several request interceptors
+        interceptResolutionPriority: DEFAULT_INTERCEPT_RESOLUTION_PRIORITY
+    })
+)
+
 
 const initBrowser = async (browsers) => {
     puppeteer.use(pluginStealth());
@@ -10,6 +21,7 @@ const initBrowser = async (browsers) => {
         const browser = await puppeteer.launch({
             executablePath: executablePath(),
             headless: JSON.parse(config.headless),
+            ignoreHTTPSErrors: true,
             args: [
                 "--no-sandbox",
                 '--disable-features=site-per-process',

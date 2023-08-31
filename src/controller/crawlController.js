@@ -13,9 +13,8 @@ const crawl = async (req, res) => {
 
     await initBrowser(browsers);
     let browser = null;
-    let i = 0;
 
-    while (startPage++ <= endPage) {
+    while (startPage <= endPage) {
         browser = await getBrowser(browsers);
 
         try {
@@ -28,8 +27,8 @@ const crawl = async (req, res) => {
             }
         } catch (error) {
             console.error(error);
-            break;
         }
+        startPage ++;
     }
 
     await checkPendingBrowsers(browsers);
@@ -40,7 +39,7 @@ const crawl = async (req, res) => {
 
         if (browser) {
             const story = uncrawledStories.shift();
-            CrawlStory(browser, story.url, true);
+            CrawlStory(browser, story.url);
             await new Promise(resolve => setTimeout(resolve, 250));
         } else {
             await new Promise(resolve => setTimeout(resolve, 1000));
