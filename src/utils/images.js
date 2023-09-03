@@ -1,14 +1,16 @@
 const fs = require('fs')
 const axios = require('axios');
+const https = require("https");
 const config = require('../config/config');
 
 const options = {
     headers: {
         referer: config.nettruyenHost
     },
-    responseType: 'stream',
-    // responseType: 'arraybuffer',
-    timeout: 0,
+    // responseType: 'stream',
+    responseType: 'arraybuffer',
+    timeout: 60000,
+    httpsAgent: new https.Agent({ keepAlive: true }),
     maxContentLength: Infinity,
     maxBodyLength: Infinity
 };
@@ -36,40 +38,44 @@ const downloadImage = async (url, destination, callback) => {
     try {
         const response = await axios.get(url, options);
 
-        // fs.writeFile(destination, response.data, (error) => {
-        //     if (error) {
-        //         callback(`Đã xảy ra lỗi khi tải ảnh ${destination} : ${error}`);
-        //     } else {
-        //         callback(`Ảnh ${destination} đã được tải về thành công!`);
-        //     }
+        await fs.promises.writeFile(destination, response.data);
+        return `Ảnh ${destination} đã được tải về thành công!`;
+
+
+        // const writer = fs.createWriteStream(destination);
+        // await response.data.pipe(writer);
+        // writer.on('finish', () => {
+        //     callback(`Ảnh ${url} đã được tải về thành công!`);
         // });
-        const writer = fs.createWriteStream(destination);
-        response.data.pipe(writer);
-        writer.on('finish', () => {
-            callback(`Ảnh ${url} đã được tải về thành công!`);
-        });
-        writer.on('error', (error) => {
-            callback(`Đã xảy ra lỗi khi tải ảnh ${url} : ${error}`);
-        });
+        // writer.on('error', (error) => {
+        //     callback(`Đã xảy ra lỗi khi tải ảnh ${url} : ${error}`);
+        // });
 
-        return true;
+        // return true;
     } catch (error) {
-        callback(`Đã xảy ra lỗi khi tải ảnh ${url} : ${error}`);
-
-        return false;
+        if (error.response) {
+            throw `Đã xảy ra lỗi khi tải ảnh ${url}: ${error.response.statusText}`;
+        } else if (error.code === 'ECONNABORTED') {
+            throw `Đã xảy ra lỗi kết nối khi tải ảnh ${url}: Thời gian chờ đã vượt quá giới hạn`;
+        } else if (error.code === 'ENOTFOUND') {
+            throw `Đã xảy ra lỗi kết nối khi tải ảnh ${url}: Không tìm thấy địa chỉ máy chủ`;
+        } else {
+            throw `Đã xảy ra lỗi khi tải ảnh ${url}: ${error.message}`;
+        }
     }
 };
 
 const downloadImages = async (urls, dir) => {
-    const promises = urls.map(async (url, index) => {
-        const path = `${dir}/${index + 1}.jpg`;
-        await downloadImage(url, path, (message) => {
-            if (message) {
-                console.log(message);
-            }
+    try {
+        const promises = urls.map(async (url, index) => {
+            const path = `${dir}/${index + 1}.jpg`;
+            return await downloadImage(url, path);
         });
-    });
-    await Promise.all(promises);
+        const results = await Promise.all(promises);
+        results.forEach(result => console.log(result));
+    } catch (error) {
+        console.log(error);
+    }
 };
 
 module.exports = { initImageStorage, downloadImage, downloadImages }

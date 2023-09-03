@@ -11,22 +11,12 @@ const storySelector = config.storySelector;
 const chapterSelector = config.chapterSelector;
 
 const crawlPage = async (browser, pageUrl, isNew = false) => {
-    browser.on('disconnected', () => {
-        console.log('Trình duyệt đã bị đóng.');
-        // Thực hiện các xử lý bổ sung hoặc thông báo lỗi tại đây
-        return false;
-    });
     const page = await browser.browser.newPage();
     await page.setUserAgent(userAgent.random().toString());
     await page.setRequestInterception(true);
 
     page.on('request', (req) => {
-        if (
-            req.resourceType() === 'image'
-            || req.resourceType() === 'stylesheet'
-            || req.resourceType() === 'font'
-            || req.resourceType() === 'script'
-        ) {
+        if (['image', 'stylesheet', 'font', 'script'].includes(req.resourceType())) {
             req.abort();
         }
         else {
@@ -62,12 +52,11 @@ const crawlPage = async (browser, pageUrl, isNew = false) => {
             }, pageSelector);
 
             const stories = isNew ? await updateStories(extractedData) : await updateStories(extractedData);
-
             await makeBrowserPending(browser, page);
+
             if (!stories) {
                 reject(false);
             }
-
             resolve(true);
         } catch (error) {
             console.error(error);
@@ -77,18 +66,13 @@ const crawlPage = async (browser, pageUrl, isNew = false) => {
     });
 };
 
-const CrawlStory = async (browser, storyUrl, isNew = false) => {
+const crawlStory = async (browser, storyUrl, isNew = false) => {
     const page = await browser.browser.newPage();
     await page.setUserAgent(userAgent.random().toString());
     await page.setRequestInterception(true);
 
     page.on('request', (req) => {
-        if (
-            req.resourceType() === 'image'
-            || req.resourceType() === 'stylesheet'
-            || req.resourceType() === 'font'
-            || req.resourceType() === 'script'
-        ) {
+        if (['image', 'stylesheet', 'font', 'script'].includes(req.resourceType())) {
             req.abort();
         }
         else {
@@ -121,7 +105,7 @@ const CrawlStory = async (browser, storyUrl, isNew = false) => {
                     listChapters.map(async (item) => {
                         const chap = item.textContent;
                         const url = await window.regexUrl(item.getAttribute("href")) || "null";
-                        
+
                         return {
                             chap: chap,
                             url: url
@@ -162,8 +146,8 @@ const CrawlStory = async (browser, storyUrl, isNew = false) => {
             });
 
             const chapters = isNew ? await insertChapters(data) : await updateChapters(data);
-
             await makeBrowserPending(browser, page);
+
             if (!chapters) {
                 reject(false);
             }
@@ -179,16 +163,11 @@ const CrawlStory = async (browser, storyUrl, isNew = false) => {
 
 const crawlChapter = async (browser, chapterUrl, isNew = false) => {
     const page = await browser.browser.newPage();
-    // await page.setUserAgent(userAgent.random().toString());
+    await page.setUserAgent(userAgent.random().toString());
     await page.setRequestInterception(true);
 
     page.on('request', (req) => {
-        if (
-            req.resourceType() === 'image'
-            || req.resourceType() === 'stylesheet'
-            || req.resourceType() === 'font'
-            || req.resourceType() === 'script'
-        ) {
+        if (['image', 'stylesheet', 'font', 'script'].includes(req.resourceType())) {
             req.abort();
         }
         else {
@@ -234,12 +213,14 @@ const crawlChapter = async (browser, chapterUrl, isNew = false) => {
             }
 
             let storyId = null;
+
             if (isNew) {
                 storyId = chapter.story_id;
             } else {
                 let story = await findStory(extractedData.storyUrl);
+
                 if (story.length === 0) {
-                    story = await CrawlStory(browser, extractedData.storyUrl, true);
+                    story = await crawlStory(browser, extractedData.storyUrl, true);
                 };
 
                 if (!story) {
@@ -250,8 +231,9 @@ const crawlChapter = async (browser, chapterUrl, isNew = false) => {
             };
 
             const dir = initImageStorage(storyId, chapter._id.toString());
-            await downloadImages(extractedData.chapter.images, dir);
+            downloadImages(extractedData.chapter.images, dir);
             await makeBrowserPending(browser, page);
+
             resolve(chapter);
         } catch (error) {
             console.log(error);
@@ -280,4 +262,4 @@ const autoScroll = async (page) => {
     });
 }
 
-module.exports = { crawlPage, CrawlStory, crawlChapter };
+module.exports = { crawlPage, crawlStory, crawlChapter };

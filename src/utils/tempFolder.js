@@ -11,7 +11,7 @@ const deletePuppeteerFolders = async () => {
             const filePath = path.join(tempDir, file);
             const stats = await fs.promises.stat(filePath);
             if (stats.isDirectory() && file.includes('puppeteer')) {
-                await fs.promises.rmdir(filePath, { recursive: true });
+                await fs.promises.rm(filePath, { recursive: true });
                 console.log(`Đã xóa thư mục ${ filePath }`);
             }
         }

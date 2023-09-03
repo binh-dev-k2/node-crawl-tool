@@ -2,7 +2,7 @@ const config = require("../config/config");
 const { getUncrawledChapters, findChapters } = require("../services/ChapterService");
 const { getUncrawledStories } = require("../services/StoryService");
 const { initBrowser, getBrowser, clearBrowser, checkPendingBrowsers } = require("../utils/browsers");
-const { crawlPage, CrawlStory, crawlChapter } = require("../utils/crawl");
+const { crawlPage, crawlStory, crawlChapter } = require("../utils/crawl");
 const { deletePuppeteerFolders } = require("../utils/tempFolder");
 
 let browsers = [];
@@ -44,7 +44,7 @@ const crawl = async (req, res) => {
 
             if (browser) {
                 const story = uncrawledStories.shift();
-                CrawlStory(browser, story.url);
+                crawlStory(browser, story.url);
                 await sleep(250);
             } else {
                 await sleep(1000);
@@ -87,7 +87,7 @@ const crawlStories = async (req, res) => {
 
         browser = await getBrowser(browsers);
 
-        const story = browser ? await CrawlStory(browser, data.url) : false;
+        const story = browser ? await crawlStory(browser, data.url) : false;
 
         if (!story) {
             await clearBrowser(browsers);
