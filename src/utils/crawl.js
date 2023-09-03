@@ -11,8 +11,13 @@ const storySelector = config.storySelector;
 const chapterSelector = config.chapterSelector;
 
 const crawlPage = async (browser, pageUrl, isNew = false) => {
+    browser.on('disconnected', () => {
+        console.log('Trình duyệt đã bị đóng.');
+        // Thực hiện các xử lý bổ sung hoặc thông báo lỗi tại đây
+        return false;
+    });
     const page = await browser.browser.newPage();
-    // await page.setUserAgent(userAgent.random().toString());
+    await page.setUserAgent(userAgent.random().toString());
     await page.setRequestInterception(true);
 
     page.on('request', (req) => {
@@ -74,7 +79,7 @@ const crawlPage = async (browser, pageUrl, isNew = false) => {
 
 const CrawlStory = async (browser, storyUrl, isNew = false) => {
     const page = await browser.browser.newPage();
-    // await page.setUserAgent(userAgent.random().toString());
+    await page.setUserAgent(userAgent.random().toString());
     await page.setRequestInterception(true);
 
     page.on('request', (req) => {
@@ -106,8 +111,8 @@ const CrawlStory = async (browser, storyUrl, isNew = false) => {
             const extractedData = await page.evaluate(async (storyUrl, storySelector) => {
                 const title = (document.querySelector(storySelector.title))?.textContent || "null";
                 const author = (document.querySelector(storySelector.author))?.textContent || "null";
-                const thumbnail = (document.querySelector(storySelector.thumbnail))?.getProperty("src") || "null";
-                await window.regexUrl(thumbnail);
+                let thumbnail = (document.querySelector(storySelector.thumbnail))?.getProperty("src") || "null";
+                thumbnail = await window.regexUrl(thumbnail);
                 let description = storySelector.description;
 
                 const storyContainer = document.querySelector(storySelector.chapterContainer);
@@ -115,8 +120,8 @@ const CrawlStory = async (browser, storyUrl, isNew = false) => {
                 const chapters = await Promise.all(
                     listChapters.map(async (item) => {
                         const chap = item.textContent;
-                        const href = item.getAttribute("href") || "null";
-                        const url = await window.regexUrl(href) || "null";
+                        const url = await window.regexUrl(item.getAttribute("href")) || "null";
+                        
                         return {
                             chap: chap,
                             url: url
@@ -177,27 +182,25 @@ const crawlChapter = async (browser, chapterUrl, isNew = false) => {
     // await page.setUserAgent(userAgent.random().toString());
     await page.setRequestInterception(true);
 
-    // page.on('request', (req) => {
-    //     if (
-    //         req.resourceType() === 'image'
-    //         // || req.resourceType() === 'stylesheet'
-    //         // || req.resourceType() === 'font'
-    //         // || req.resourceType() === 'script'
-    //     ) {
-    //         req.abort();
-    //     }
-    //     else {
-    //         req.continue();
-    //     }
-    // });
+    page.on('request', (req) => {
+        if (
+            req.resourceType() === 'image'
+            || req.resourceType() === 'stylesheet'
+            || req.resourceType() === 'font'
+            // || req.resourceType() === 'script'
+        ) {
+            req.abort();
+        }
+        else {
+            req.continue();
+        }
+    });
 
     try {
         await page.goto(chapterUrl, { waitUntil: ['domcontentloaded', 'networkidle2'], timeout: 0 });
         await page.waitForSelector(`${chapterSelector.imageContainer}`);
-        await page.waitForTimeout(1000);
-        await autoScroll(page);
+        // await autoScroll(page);
         await page.exposeFunction("regexUrl", regexUrl);
-        await page.waitForTimeout(2000);
     } catch (error) {
         console.error(error);
         await makeBrowserPending(browser, page);
@@ -210,7 +213,7 @@ const crawlChapter = async (browser, chapterUrl, isNew = false) => {
                 const chapterContainer = document.querySelector(chapterSelector.imageContainer);
                 const listImages = Array.from(chapterContainer.querySelectorAll(`${chapterSelector.imageItem} ${chapterSelector.imageUrl}`));
                 const images = await Promise.all(
-                    listImages.map(async (item) => await regexUrl(item.getAttribute('src')))
+                    listImages.map(async (item) => await regexUrl(item.getAttribute('data-original')))
                 );
 
                 let storyUrl = document.querySelector(chapterSelector.storyUrl)

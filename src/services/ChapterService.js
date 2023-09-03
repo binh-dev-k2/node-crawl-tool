@@ -51,7 +51,7 @@ const updateChapters = async (chapters) => {
 
 const findChapters = async (storyId) => {
     try {
-        return await Chapter.find({ story_id: storyId }).exec();
+        return await Chapter.find({ story_id: storyId, status: 0 }).exec();
     } catch (error) {
         console.error(error);
         return false;
