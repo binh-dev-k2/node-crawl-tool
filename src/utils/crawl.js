@@ -187,7 +187,7 @@ const crawlChapter = async (browser, chapterUrl, isNew = false) => {
             req.resourceType() === 'image'
             || req.resourceType() === 'stylesheet'
             || req.resourceType() === 'font'
-            // || req.resourceType() === 'script'
+            || req.resourceType() === 'script'
         ) {
             req.abort();
         }
