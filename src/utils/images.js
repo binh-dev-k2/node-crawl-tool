@@ -9,7 +9,7 @@ const options = {
     },
     // responseType: 'stream',
     responseType: 'arraybuffer',
-    timeout: 60000,
+    timeout: 100000,
     httpsAgent: new https.Agent({ keepAlive: true }),
     maxContentLength: Infinity,
     maxBodyLength: Infinity

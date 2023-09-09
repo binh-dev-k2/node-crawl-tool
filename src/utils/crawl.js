@@ -231,7 +231,7 @@ const crawlChapter = async (browser, chapterUrl, isNew = false) => {
             };
 
             const dir = initImageStorage(storyId, chapter._id.toString());
-            downloadImages(extractedData.chapter.images, dir);
+            await downloadImages(extractedData.chapter.images, dir);
             await makeBrowserPending(browser, page);
 
             resolve(chapter);
