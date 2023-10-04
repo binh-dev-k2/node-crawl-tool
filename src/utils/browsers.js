@@ -1,5 +1,3 @@
-const puppeteer = require("puppeteer-extra");
-const config = require("../config/config");
 
 const initBrowser = async (browsers) => {
     for (let i = 1; i <= config.numberBrowser; i++) {
