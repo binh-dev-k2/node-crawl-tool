@@ -1,7 +1,7 @@
 {
-    "name": "crawl-tool",
+    "name": "ICTU-Tinder",
     "version": "1.0.0",
-    "description": "crawl tool using node js",
+    "description": "Giup moi nguoi het FA",
     "main": "index.js",
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
