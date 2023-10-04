@@ -26,7 +26,7 @@ const register = async (req, res) => {
             email: email.toLowerCase(),
             password: encryptedPassword,
             images: images,
-            social: [],
+            social: social.length > 0 ? social : [],
             phone: phone,
             status: 0,
             is_blocked: false
@@ -48,7 +48,7 @@ const register = async (req, res) => {
         res.status(201).json({
             success: true,
             message: 'Thêm mới tài khoản thành công!',
-            data: user
+            data: { user: user }
         });
     } catch (error) {
         return res.status(500).json({
@@ -66,7 +66,7 @@ const login = async (req, res) => {
         if (!(email && password)) {
             res.status(400).send("All input is required");
         }
-        
+
         const user = await findUser(email);
 
         if (user && (await bcrypt.compare(password, user.password))) {
@@ -84,7 +84,7 @@ const login = async (req, res) => {
             res.status(201).json({
                 success: true,
                 message: 'Đăng nhập thành công!',
-                data: user
+                data: { user: user }
             });
         }
         res.status(400).send("Invalid Credentials");
