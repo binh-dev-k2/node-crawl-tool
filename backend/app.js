@@ -16,7 +16,6 @@ app.use(route);
 
 if (process.env.NODE_ENV == "development") {
     app.use(morgan("dev"));
-    session.Cookie.secure = true;
 }
 
 module.exports = app;

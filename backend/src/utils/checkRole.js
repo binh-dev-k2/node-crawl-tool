@@ -1,6 +1,0 @@
-
-
-
-const checkRole = async (email) => {
-    
-}
