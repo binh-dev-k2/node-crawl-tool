@@ -40,7 +40,7 @@ const register = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Có lỗi xảy ra, xin vui lòng thử lại sau.',
-            error: error.message,
+            data: { error: error.message },
         });
     }
     res.end();
@@ -50,20 +50,22 @@ const login = async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        const user = await getUser(email);
-        const isPasswordMatch = await bcrypt.compare(password, user.password)
-
-        if (user && isPasswordMatch) {
-            const token = await generateAuthToken(user)
-
-            return res.status(201).json({
+        const user = await findByCredentials(email, password);
+        if (!user) {
+            return res.status(401).send({
                 success: true,
-                message: 'Đăng nhập thành công!',
-                data: { token: 'JWT ' + token },
-            });
+                message: 'Login failed! Check authentication credentials',
+                data: {}
+            })
         }
 
-        return res.status(400).send("Invalid Credentials");
+        const token = await generateAuthToken(user)
+
+        return res.status(200).json({
+            success: true,
+            message: 'Đăng nhập thành công!',
+            data: { token: 'Bearer ' + token },
+        });
     } catch (err) {
         console.log(err);
         return res.status(500).send(err);

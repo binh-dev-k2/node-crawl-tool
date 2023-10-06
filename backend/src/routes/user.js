@@ -1,8 +1,9 @@
 const express = require("express");
 const route = express.Router();
+const { VerifyToken, CheckAdmin } = require("../middleware/AuthMiddleware")
 
 
-route.delete('/:id', async (req, res) => {
+route.delete('/:id', [VerifyToken, CheckAdmin], async (req, res) => {
     const { id } = req.params
     try {
         const removed = await Todo.findByIdAndDelete(id)
