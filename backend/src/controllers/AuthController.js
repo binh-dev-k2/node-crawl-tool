@@ -1,43 +1,44 @@
-const { getUser, createUser } = require("../services/UserService");
+const { getUser, createUser, findByCredentials, verifyData } = require("../services/UserService");
 const { generateAuthToken } = require("../utils/token")
 require("dotenv").config();
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
 
 const register = async (req, res) => {
     try {
-        const { user_name, email, password, images, social, phone } = req.body;
+        const data = verifyData(req.body);
 
-        const existingUser = await getUser(email);
+        const existingUser = await getUser(data.email);
         if (existingUser) {
-            return res.status(409).json({
+            return res.status(400).json({
                 success: false,
                 message: "Email đã tồn tại.",
-                data: []
+                data: { user: data }
             });
         }
 
-        const userModel = {
-            user_name: user_name.trim(),
-            email: email.toLowerCase().trim(),
-            password: await bcrypt.hash(password.trim(), 10),
-            images: images,
-            social: social.length > 0 ? social : [],
-            phone: phone,
-            status: 0,
-            is_blocked: false,
-            role: 0
+        const user = await createUser(data);
+        if (!user) {
+            return res.status(500).json({
+                success: false,
+                message: 'Có lỗi xảy ra trong quá trình đăng ký, xin vui lòng thử lại sau.',
+                data: { error: error.message },
+            });
         }
 
-        const user = await createUser(userModel);
+        const token = await generateAuthToken(user)
+        user.token = token
 
-        res.status(201).json({
+        res.status(200).json({
             success: true,
             message: 'Thêm mới tài khoản thành công!',
-            data: { user: user }
+            data: {
+                user: {
+                    user_name: user.user_name,
+                    _token: token
+                }
+            }
         });
     } catch (error) {
-        return res.status(500).json({
+        res.status(500).json({
             success: false,
             message: 'Có lỗi xảy ra, xin vui lòng thử lại sau.',
             data: { error: error.message },
@@ -48,10 +49,11 @@ const register = async (req, res) => {
 
 const login = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const data = verifyData(req.body);
+        const { email, password } = data;
 
         const user = await findByCredentials(email, password);
-        if (!user) {
+        if (!user || user.is_blocked == 1) {
             return res.status(401).send({
                 success: true,
                 message: 'Login failed! Check authentication credentials',
@@ -60,24 +62,26 @@ const login = async (req, res) => {
         }
 
         const token = await generateAuthToken(user)
+        user.token = token
 
-        return res.status(200).json({
+        res.status(200).json({
             success: true,
             message: 'Đăng nhập thành công!',
-            data: { token: 'Bearer ' + token },
+            data: {
+                user: user.user_name,
+                _token: token
+            },
         });
-    } catch (err) {
-        console.log(err);
-        return res.status(500).send(err);
+    } catch (error) {
+        console.log(error);
+        res.status(500).send({
+            success: false,
+            message: 'Có lỗi xảy ra, xin vui lòng thử lại sau.',
+            data: { error: error.message },
+        });
     }
+    res.end();
 };
 
-const logout = async (req, res, next) => {
-    req.logout(function (err) {
-        if (err) { return next(err); }
-        return res.redirect('/login');
-    });
-}
 
-
-module.exports = { register, login, logout };
+module.exports = { register, login };

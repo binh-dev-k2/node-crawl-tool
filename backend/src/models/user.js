@@ -12,19 +12,12 @@ const userSchema = Schema({
     password: { type: String, required: true, min: 7 },
     phone: { type: String, min: 10, max: 10 },
     images: [{ type: String }],
+    gender: { type: Number },
     social: { type: String, min: 6, max: 255 },
-    status: { type: Number, required: true },
+    description: { type: String },
     is_blocked: { type: Boolean, required: true },
     role: { type: Number, required: true },
-    token: { type: String, required: true }
+    token: { type: String }
 });
-
-userSchema.pre('save', async function (next) {
-    const user = this
-    if (user.isModified('password')) {
-        user.password = await bcrypt.hash(user.password, 8)
-    }
-    next()
-})
 
 module.exports = model("User", userSchema, "users");

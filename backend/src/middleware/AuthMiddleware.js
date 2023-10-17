@@ -1,12 +1,12 @@
 const jwt = require("jsonwebtoken");
+const { verifyUser } = require("../services/UserService");
 require("dotenv").config();
 
 const VerifyToken = (req, res, next) => {
     const token = req.header('Authorization').replace('Bearer ', '')
 
     if (!token) {
-        return res.redirect('/login')
-        // return res.status(403).send("A token is required for authentication");
+        res.status(403).send("A token is required for authentication");
     }
 
     try {

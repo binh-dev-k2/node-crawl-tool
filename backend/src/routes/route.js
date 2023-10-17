@@ -7,7 +7,7 @@ const user = require('./user')
 
 
 route.use('/api', api);
-route.use('/auth', auth);
+// route.use('/auth', auth);
 route.use('/user', user);
 
 

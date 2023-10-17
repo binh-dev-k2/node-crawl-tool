@@ -1,9 +1,11 @@
 const express = require("express");
 const route = express.Router();
-const { VerifyToken, CheckAdmin } = require("../middleware/AuthMiddleware")
+const { VerifyToken, CheckAdmin } = require("../middleware/AuthMiddleware");
+const { randomUser } = require("../controllers/UserController");
 
 
-route.delete('/:id', [VerifyToken, CheckAdmin], async (req, res) => {
+
+route.delete('/delete/:id', [VerifyToken, CheckAdmin], async (req, res) => {
     const { id } = req.params
     try {
         const removed = await Todo.findByIdAndDelete(id)
