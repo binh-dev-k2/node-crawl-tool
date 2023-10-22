@@ -69,6 +69,9 @@ const login = async (req, res) => {
             message: 'Đăng nhập thành công!',
             data: {
                 user: user.user_name,
+                images: user.images,
+                gender: user.gender,
+                is_blocked: user.is_blocked,
                 _token: token
             },
         });

@@ -1,4 +1,5 @@
 import { Http } from '../../helpers'
+import { LocalStorage } from '@/helpers/local-storage';
 
 const state = {
     users: [],
@@ -12,6 +13,7 @@ const getters = {
 
 const actions = {
     getUsers(context) {
+        
         return new Promise(() => {
             Http.get('/admin/api/users')
                 .then(response => {
@@ -28,8 +30,11 @@ const actions = {
         })
     },
     updateUser(context, obj) {
+        let token = LocalStorage.getToken();
+        console.log(token);
+        console.log(obj);
         return new Promise((res) => {
-            Http.post('/api/users/update/' + obj._id, obj)
+            Http.post('/api/users/update/' + token, obj)
                 .then(response => {
                     res(response);
                 })
@@ -59,6 +64,7 @@ const mutations = {
         state.users = users;
     },
     setUser(state, user) {
+        console.log(user);
         state.user = user
     }
 }

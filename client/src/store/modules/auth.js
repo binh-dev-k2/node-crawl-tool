@@ -1,5 +1,5 @@
 import { authService } from '../../services';
-// import { router } from '../../helpers';
+import router from '@/routes/router';
 
 export const auth = {
     namespaced: true,
@@ -16,33 +16,42 @@ export const auth = {
                 .then(
                     user => {
                         commit('login', user);
-                        // router.push('/');
+                        if(user.images.length > 0) {
+                            router.push('/');
+                        }else {
+                            router.push({name: 'account.update'})
+                        }
                     },
-                    error => {
-                        dispatch('alert/error', error, { root: true });
+                    () => {
+                        dispatch('alert/error', "Tài khoản hoặc mật khẩu không chính xác", { root: true });
                     }
                 );
         },
         logout({ commit }) {
+          
             authService.logout();
             commit('logout');
+            router.push('/login');
         },
-        register({ dispatch, commit }, user) {
-            authService.register(user)
+        register({ dispatch, commit }, data) {
+           
+            authService.register(data)
                 .then(
                     user => {
                         commit('login', user);
-                        // router.push('/login');
+                        router.push('/');
                         setTimeout(() => {
                             // hiển thị message thành công sau redirect sang trang 
                             dispatch('alert/success', 'Registration successful', { root: true });
                         })
                     },
                     error => {
-                        dispatch('alert/error', error, { root: true });
+                        console.log(error);
+                        dispatch('alert/error', "Email đã tồn tại", { root: true });
                     }
                 );
-        }
+        },
+        
     },
 
     mutations: {

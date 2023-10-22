@@ -1,4 +1,5 @@
 const { defineConfig } = require('@vue/cli-service')
+const webpack = require('webpack')
 module.exports = defineConfig({
   transpileDependencies: true,
   configureWebpack: {
@@ -9,5 +10,11 @@ module.exports = defineConfig({
         },
       },
     },
+    resolve: {
+      alias: {
+        // vue$: 'vue/dist/vue.common.js',
+        'jquery': './src/assets/js/jquery.js'
+      }
+    }
   },
 })

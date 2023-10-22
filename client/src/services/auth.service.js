@@ -5,12 +5,10 @@ const login = async (email, password) => {
     const data = { email, password };
 
     const response = await Http.post('/api/auth/login', data)
-    
     if (response.success === true) {
-        LocalStorage.setToken(response.data.user.token);
-        return response.data.user;  
+        LocalStorage.setToken(response.data._token);
+        return response.data;  
     }
-
     return false;
 }
 
@@ -19,14 +17,14 @@ function logout() {
     return true;
 }
 
-// function register(user) {
-//     const requestOptions = {
-//         headers: { 'Content-Type': 'application/json' },
-//         body: JSON.stringify(user)
-//     };
-
-//     return fetch(`${config.apiUrl}/users/register`, requestOptions).then(handleResponse);
-// }
+async function register(user) {
+   
+    const response = await Http.post('/api/auth/register', user)
+    if(response.success === true) {
+        return response.data.user;
+    }
+    return false;
+}
 
 // function getAll() {
 //     const requestOptions = {
@@ -89,7 +87,7 @@ function logout() {
 export const authService = {
     login,
     logout,
-    // register,
+    register,
     // getAll,
     // getById,
     // update,

@@ -1,6 +1,6 @@
 import { alert } from './modules/alert';
 import { auth } from './modules/auth';
-// import { user } from './modules/user';
+import { user } from './modules/user';
 import { createStore } from "vuex"
 
 export const store = createStore({
@@ -10,6 +10,6 @@ export const store = createStore({
     modules: {
         alert,
         auth,
-        // user
+        user
     }
 })
