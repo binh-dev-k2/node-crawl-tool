@@ -3,7 +3,7 @@
         <div class="container">
             <div class="account-area">
                 <div class="section-head ps-0">
-                    <h3>Đăng nhập ngay</h3>
+                    <h3 class="text-centr">Đăng nhập ngay</h3>
                 </div>
                 <form @submit.prevent="handleSubmit">
                     <div class="form-group pb-2">
