@@ -16,11 +16,7 @@ const W3DatingKit = function(){
 	var screenHeight = $( window ).height();
 	
 	// Preloader ============
-	var handlePreloader = function(){
-		setTimeout(function() {
-            jQuery('#preloader').fadeOut(300);
-		},300);
-	}
+	
 
 	// Menubar Toggler ============
     var handleMenubar = function() {
@@ -546,7 +542,7 @@ const W3DatingKit = function(){
 		},
 
 		load:function(){
-			handlePreloader();
+			
 			handleSelectpicker();
 			appNavigateShare();
 		},

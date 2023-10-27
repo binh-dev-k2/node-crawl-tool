@@ -1,8 +1,8 @@
 import { LocalStorage } from './local-storage'
 
 export const authHeader = () => {
-    let token = JSON.parse(LocalStorage.getToken());
-
+    let token = LocalStorage.getToken();
+    console.log(token);
     if (token) {
         return { 'Authorization': 'Bearer ' + token };
     } else {

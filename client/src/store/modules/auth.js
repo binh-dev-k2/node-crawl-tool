@@ -28,7 +28,6 @@ export const auth = {
                 );
         },
         logout({ commit }) {
-          
             authService.logout();
             commit('logout');
             router.push('/login');

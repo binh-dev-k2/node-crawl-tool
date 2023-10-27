@@ -1,5 +1,6 @@
 import { Http } from '../../helpers'
-import { LocalStorage } from '@/helpers/local-storage';
+import { authService } from '../../services';
+import router from '@/routes/router';
 
 const state = {
     users: [],
@@ -8,14 +9,15 @@ const state = {
 
 const getters = {
     getAllUsers: (state) => state.users,
-    getRandomUser: (state) => state.user
+    getUser: (state) => state.user
+
 }
 
 const actions = {
     getUsers(context) {
         
         return new Promise(() => {
-            Http.get('/admin/api/users')
+            Http.post('api/user/random-user')
                 .then(response => {
                     context.commit('setUsers', response.data.users);
                 });
@@ -30,21 +32,40 @@ const actions = {
         })
     },
     updateUser(context, obj) {
-        let token = LocalStorage.getToken();
-        console.log(token);
+        let header = {
+            'Content-Type': 'multipart/form-data' 
+        }
         console.log(obj);
         return new Promise((res) => {
-            Http.post('/api/users/update/' + token, obj)
+            Http.post('/api/user/update/', obj,header)
                 .then(response => {
                     res(response);
                 })
         })
     },
-    getUser(context, id) {
+    getUser(context) {
         return new Promise((res) => {
-            Http.get('/api/users/' + id)
+                Http.post('/api/user/myuser')
                 .then(response => {
-                    context.commit('setUser', response.data.user);
+                    console.log(response);
+                    context.commit('setUser', response);
+                    res(response);
+                })
+                .catch(() => {
+                    console.log("Lỗi r em ơi");
+                    authService.logout();
+                    context.commit('logout');
+                    router.push('/login');
+                })
+        })
+    },
+    handle(context, data) {
+        return new Promise((res) => {
+            console.log(data);
+            Http.post('/api/user/handle', data)
+                .then(response => {
+                    console.log(response.data);
+                    context.commit('setUsers', response.data.users);
                     res(response);
                 })
         })
@@ -64,9 +85,9 @@ const mutations = {
         state.users = users;
     },
     setUser(state, user) {
-        console.log(user);
         state.user = user
-    }
+    },
+    
 }
 
 export const user = {

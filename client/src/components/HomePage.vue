@@ -1,46 +1,54 @@
 <template>
   <div>
-    <div class="hello">
-      Hello
+    <div class="page-wrapper" v-cloak>
+      <!-- Preloader -->
+	<div v-show="!loader" id="preloader">
+		<div class="loader">
+			<div class="load-circle"><div></div><div></div></div>
+		</div>
+	</div>
+    <!-- Preloader end-->
+      <HeaderVue></HeaderVue>
+      <SliceTinderVueVue/>
+      <!-- <MenuBarVue></MenuBarVue> -->
     </div>
-    <p>
-      <button @click="Logout">Logout</button>
-    </p>
   </div>
 </template>
 
 <script>
 import { mapActions } from 'vuex'
+import HeaderVue from './partials/HeaderVue.vue';
 
+import SliceTinderVueVue from './SliceTinder/SliceTinderVue.vue';
 export default {
+  components: {
+    HeaderVue,
+    SliceTinderVueVue
+  },
+  data() {
+    return {
+      loader: false,
+    }
+  },
   methods: {
     ...mapActions({
       logout: 'auth/logout'
     }),
     Logout() {
       this.logout();
-    }
+    },
+   
+  },
+  mounted() {
+    setTimeout(()=> {
+      this.loader = true;
+    },1000)
   }
 }
 </script>
 
 <style scoped>
-h3 {
-  margin: 40px 0 0;
-}
 
-ul {
-  list-style-type: none;
-  padding: 0;
-}
 
-li {
-  display: inline-block;
-  margin: 0 10px;
-}
-
-a {
-  color: #42b983;
-}
 </style>
 

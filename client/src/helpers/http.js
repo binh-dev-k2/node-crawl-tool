@@ -11,18 +11,19 @@ const init = () => {
 
 const get = async (url) => {
     try {
-        const response = await http.get(url, { headers: authHeader })
+        const response = await http.get(url, { headers: authHeader() })
         return response.data
     } catch (error) {
         throw new Error(`[Error] Http ${error}`)
     }
 }
 
-const post = async (resource, params) => {
+const post = async (resource, params, header = {}) => {
     try {
-        const response = await http.post(resource, params, { headers: authHeader })
+        const response = await http.post(resource, params, { headers: {...authHeader(), ...header} })
         return response.data
     } catch (error) {
+        
         throw new Error(`[Error] Http ${error}`)
     }
 }

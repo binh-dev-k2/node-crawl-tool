@@ -2,19 +2,20 @@ const jwt = require("jsonwebtoken");
 const { verifyUser } = require("../services/UserService");
 require("dotenv").config();
 
-const VerifyToken = (req, res, next) => {
+const VerifyToken = async (req, res, next) => {;
     const token = req.header('Authorization').replace('Bearer ', '')
-
+    
     if (!token) {
         res.status(403).send("A token is required for authentication");
     }
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_KEY);
-        const user = verifyUser(decoded._id, token)
+        const user = await verifyUser(decoded._id, token)
         if (!user) {
             throw new Error()
         }
+        
         req.user = user;
         next()
     } catch (err) {

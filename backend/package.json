@@ -19,8 +19,11 @@
         "express-validator": "^7.0.1",
         "http": "^0.0.1-security",
         "jsonwebtoken": "^9.0.2",
+        "mongodb": "^6.2.0",
         "mongoose": "^7.4.3",
-        "socket.io": "^4.7.2"
+        "multer": "^1.4.5-lts.1",
+        "socket.io": "^4.7.2",
+        "vuejs-datepicker": "^1.6.2"
     },
     "devDependencies": {
         "morgan": "^1.10.0",

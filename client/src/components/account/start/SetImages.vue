@@ -3,7 +3,7 @@
         <div class="section-head ps-0">
             <h3>Hãy chọn những bức ảnh đẹp nhất của bạn nào</h3>
         </div>
-        <div class="row g-3 grid_image" data-masonry='{"percentPosition": true }'>
+        <div class="row g-3 grid_image">
             <div class="col-8">
                 <div class="dz-drop-box">
                     <div class="drop-bx bx-lg">

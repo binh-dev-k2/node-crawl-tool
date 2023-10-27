@@ -1,5 +1,9 @@
+const path = require('path');
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
+const GridFSBucket = require('mongodb').GridFSBucket;
+const { MongoClient, ObjectId } = require('mongodb');
+const { default: mongoose } = require("mongoose");
 
 
 const createUser = async (data) => {
@@ -11,8 +15,8 @@ const createUser = async (data) => {
         password: await hashPassword(password),
         gender: 0,
         is_blocked: false,
-        role: 0
-    }
+        role: 0,
+    };
 
     try {
         return User(user).save();
@@ -20,18 +24,24 @@ const createUser = async (data) => {
         console.error(error);
         return false;
     }
-}
+};
 
 const updateUser = async (_id, data) => {
-    const { user_name, gender, images, social, phone, description } = data;
+    
+    const { user_name, gender, images, social, phone, description,birth,hobbies, listAccepted,listIgnore } = data;
     const filter = { _id: _id };
+
     const update = {
         user_name: user_name,
         gender: gender,
         images: images,
         social: social,
         phone: phone,
-        description: description
+        description: description,
+        listIgnore: listIgnore,
+        listAccepted: listAccepted,
+        birth: birth,
+        hobbies: hobbies,
     };
 
     try {
@@ -40,7 +50,7 @@ const updateUser = async (_id, data) => {
         console.error(error);
         return false;
     }
-}
+};
 
 const updateToken = async (user, token) => {
     const filter = { email: user.email };
@@ -52,7 +62,7 @@ const updateToken = async (user, token) => {
         console.error(error);
         return false;
     }
-}
+};
 
 const getUser = async (email) => {
     try {
@@ -61,29 +71,29 @@ const getUser = async (email) => {
         console.error(error);
         return false;
     }
-}
+};
 
 const getUserById = async (id) => {
     try {
-        return await User.findOne({ id: id }).exec();
+        return await User.findOne({ _id: id }).exec();
     } catch (error) {
         console.error(error);
         return false;
     }
-}
+};
 
 const findByCredentials = async (email, password) => {
     const user = await getUser(email);
 
     if (!user) {
-        throw new Error('Invalid user')
+        throw new Error("Invalid user");
     }
-    const isPasswordMatch = await bcrypt.compare(password, user.password)
+    const isPasswordMatch = await bcrypt.compare(password, user.password);
     if (!isPasswordMatch) {
-        throw new Error('Invalid login credentials')
+        throw new Error("Invalid login credentials");
     }
-    return user
-}
+    return user;
+};
 
 const verifyUser = async (_id, token) => {
     try {
@@ -92,35 +102,105 @@ const verifyUser = async (_id, token) => {
         console.error(error);
         return false;
     }
-}
+};
 
 const hashPassword = async (password) => {
     return await bcrypt.hash(password, 8);
-}
+};
 
 const verifyData = (data) => {
-    Object.keys(data).forEach(k => data[k] = typeof data[k] == 'string' ? data[k].trim() : data[k]);
-    return data
-}
+    Object.keys(data).forEach(
+        (k) => (data[k] = typeof data[k] == "string" ? data[k].trim() : data[k])
+    );
+    return data;
+};
 
-const getRandomUser = async (data) => {
+const getRandomUser = async (user) => {
     try {
-        const randomUser = await User.aggregate([
-            {
-                $match: { is_blocked: false, gender: data.gender },
-            },
-            {
-                $sample: { size: 1 }
+        let gender = user.gender == 1 ? 0: 1 ;
+        console.log("gender: " + gender);
+        let listUsers = await getUsersByGender(gender);
+        let listUserAvailable = [];
+        let myAge = Math.floor((Date.now() - user.birth)/ (1000 * 60 * 60 * 24 * 365));
+        let myHobbie = user.hobbies.map(e => e.id);
+        console.log("my hoobie: ",myHobbie);
+        console.log("my age: ", myAge);
+        for (let index = 0; index < listUsers.length; index++) {
+            const element = listUsers[index];
+            if(user.listAccepted.find(accept => accept == element.id) || user.listIgnore.find(ignore => ignore == element.id)) {
+                continue;
             }
-        ]);
+            let score = 0;
+            let age = Math.floor((Date.now() - element.birth)/ (1000 * 60 * 60 * 24 * 365));
+            let ageGap = (10 - Math.abs(myAge - age))
+            score += ageGap < 0 ? 0 : ageGap;
+            element.hobbies.forEach(hoobie => {
+                score += myHobbie.reduce((total,h) => {
+                    if(h == hoobie.id) {
+                       return total + 5
+                    }
+                    return total;
+                },0)
+            });
+           let newUser = {
+            user_name:element.user_name,
+            gender:element.gender,
+            age:age,
+            description:element.description,
+            phone: element.phone,
+            score: score,
+            hobbies: element.hobbies,
+            images: element.images,
+            social: element.social,
+            id: element._id,
+           }
+           
+            listUserAvailable.push(newUser);
+            if(listUserAvailable.length > 3) {
+                break;
+            }
+        }
+        return listUserAvailable.sort((a,b) =>   b.score -a.score);
+    } catch (error) {
+        console.error(error);
+        return false;
+    }
+};
 
-        return randomUser;
+const getImgUrl = (FilePath) => {
+    let url = [];
+    for (let index = 0; index < FilePath.length; index++) {
+        const element = FilePath[index];
+        const fileName = path.basename(element.path);
+        const relativeUrl = '/public/images/'  + fileName;
+        url.push(relativeUrl);
+    }
+    return url;
+}   
+const getUsersByGender = async (gender) => {
+    try {
+        return await User.find({ gender: gender }).exec();
     } catch (error) {
         console.error(error);
         return false;
     }
 }
+const handle =async (userID, data) => {
+    let user = await getUserById(userID);
+    let updateData = {};
+    if(data.status) {
+        updateData["listAccepted"] = user.listAccepted.concat([data.id]);
+    }else {
+        updateData["listIgnore"] = user.listIgnore.concat([data.id]);
 
+    }
+    await updateUser(userID, updateData);
+    let listUserNews = await getRandomUser(user);
+    if(listUserNews[0].id == data.id) {
+        listUserNews.shift();
+    }
+    return listUserNews;
+}
 module.exports = {
     createUser,
     getUser,
@@ -130,5 +210,8 @@ module.exports = {
     verifyUser,
     hashPassword,
     verifyData,
-    getRandomUser
+    getRandomUser,
+    updateUserService: updateUser,
+    getImgUrl,
+    handle
 };

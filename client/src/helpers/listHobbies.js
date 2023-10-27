@@ -1,0 +1,22 @@
+export const listHobbies =[
+    { id: 1, name: "Du lịch ✈️", slug: "du-lich", icon: "✈️" },
+    { id: 2, name: "Đá bóng ⚽", slug: "da-bong", icon: "⚽" },
+    { id: 3, name: "Nghe nhạc 🎵", slug: "am-nhac", icon: "🎵" },
+    { id: 4, name: "Nấu ăn 🍳", slug: "nau-an", icon: "🍳" },
+    { id: 5, name: "Đọc sách 📚", slug: "doc-sach", icon: "📚" },
+    { id: 6, name: "Nghe podcast 🎧", slug: "nghe-podcast", icon: "🎧" },
+    { id: 7, name: "Lập trình 💻", slug: "lap-trinh", icon: "💻" },
+    { id: 8, name: "Chơi game 🎮", slug: "choi-game", icon: "🎮" },
+    { id: 9, name: "Vẽ tranh 🎨", slug: "ve-tranh", icon: "🎨" },
+    { id: 10, name: "Xem phim 🎞️", slug: "xem-phim", icon: "🎞️" },
+    { id: 11, name: "Thiền 🧘", slug: "thien", icon: "🧘" },
+    { id: 12, name: "Tán chuyện 🗨️", slug: "tan-chuyen", icon: "🗨️" },
+    { id: 13, name: "Bơi 🏊‍♂️", slug: "boi", icon: "❄️" },
+    { id: 14, name: "Thư giãn 🌴", slug: "thu-gian", icon: "🌴" },
+    { id: 15, name: "Nghệ thuật xiếc 🎪", slug: "nghe-thuat-xiec", icon: "🎪" },
+    { id: 16, name: "Đi bộ 🚶", slug: "di-bo", icon: "🚶" },
+    { id: 17, name: "Làm vườn 🌱", slug: "lam-vuon", icon: "🌱" },
+    { id: 18, name: "Thiết kế web 🌐", slug: "thiet-ke-web", icon: "🌐" },
+    { id: 19, name: "Đi xe đạp 🚴", slug: "di-xe-dap", icon: "🚴" },
+    { id: 20, name: "Chụp ảnh 📷", slug: "chup-anh", icon: "📷" }
+];

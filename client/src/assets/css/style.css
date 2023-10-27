@@ -83,6 +83,9 @@
 	==============
 ========================= */
 /*==== 1. Abstracts ====*/
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 @import url("../icons/fontawesome/css/all.min.css");
 @import url("../icons/feather/css/iconfont.css");
 @import url("../icons/flaticon/font/flaticon.css");
