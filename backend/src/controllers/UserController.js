@@ -1,5 +1,5 @@
 const { getRandomUser, verifyData, getUserById } = require("../services/UserService")
-const { updateUserService , getImgUrl,handle } =  require("../services/UserService");
+const { updateUserService , getImgUrl,handle,getLoveUser } =  require("../services/UserService");
 
 
 
@@ -52,7 +52,23 @@ const handleUser = async (req,res) => {
     try {
         let data = verifyData(req);
         let user = data.user;
-        let listUserNews = await handle(user.id, data.body)
+        let listLoveUser = await handle(user.id, data.body)
+        res.status(200).json({
+            success: true,
+            message: 'Thành công!',
+            data: {
+                users: listLoveUser
+            },
+        });
+    } catch (error) {
+        res.status(error.code).json("error", error.message);
+    }
+}
+const loveUser = async (req,res) => {
+    try {
+        let data = verifyData(req);
+        let user = data.user;
+        let listUserNews = await getLoveUser(user.id)
         res.status(200).json({
             success: true,
             message: 'Thành công!',
@@ -61,8 +77,9 @@ const handleUser = async (req,res) => {
             },
         });
     } catch (error) {
-        res.status(error.code).json("error", error.message);
+        console.log(error);
+        // res.status(400).json("error", error);
     }
 }
 
-module.exports = { randomUser,updateUser,getMyUser,handleUser };
+module.exports = { randomUser,updateUser,getMyUser,handleUser,loveUser };

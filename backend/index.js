@@ -1,7 +1,6 @@
 const http = require("http");
 const app = require("./app");
 const server = http.createServer(app);
-require('./src/config/socket').connectSocket(server);
 
 const PORT = process.env.PORT || 3333
 

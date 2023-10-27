@@ -3,7 +3,7 @@
     <div class="page-content space-top p-b65" v-cloak>
       <div class="container">
         <div class="demo__card-cont dz-gallery-slider">
-          <h3 class=" text-center mt-5">Hết rùi. Quay lại sau vài phút để tìm được ghệ iu nha 💕💕</h3>
+          <h3 v-if="listUsers.length == 0" class=" text-center mt-5">Hết rùi. Quay lại sau vài phút để tìm được ghệ iu nha 💕💕</h3>
           <CardTinder v-on:mousedown="startDrag" v-on:mouseup="endDrag" v-for="user in listUsers.slice().reverse()"
             :currentUser="user" :key="user.id"></CardTinder>
         </div>
@@ -35,6 +35,11 @@ let listUsers = computed(() => {
   }
   return [];
 });
+setInterval(()=> {
+  if(listUsers.value.length == 0) {
+    store.dispatch("user/getUsers")
+  }
+},10000)
 
 watch(listUsers, (newVal) => {
   if (newVal.length > 0) {

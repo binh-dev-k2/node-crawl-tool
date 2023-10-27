@@ -4,12 +4,14 @@ import router from '@/routes/router';
 
 const state = {
     users: [],
-    user: {}
+    user: {},
+    loveUser: []
 }
 
 const getters = {
     getAllUsers: (state) => state.users,
-    getUser: (state) => state.user
+    getUser: (state) => state.user,
+    getLoveUser: (state) => state.loveUser,
 
 }
 
@@ -77,7 +79,16 @@ const actions = {
                     res(response)
                 })
         })
-    }
+    },
+    getLoveUser(context) {
+        return new Promise((res) => {
+            Http.post('/api/user/love') 
+            .then(response => {
+                context.commit('setLoveUsers', response.data.users);
+                res(response);
+            });
+        });
+    },
 }
 
 const mutations = {
@@ -87,6 +98,9 @@ const mutations = {
     setUser(state, user) {
         state.user = user
     },
+    setLoveUsers(state, users) {
+        state.loveUser = users
+    }
     
 }
 

@@ -117,7 +117,7 @@ const verifyData = (data) => {
 
 const getRandomUser = async (user) => {
     try {
-        let gender = user.gender == 1 ? 0: 1 ;
+        let gender = user.gender == 1 ? 2: 1 ;
         console.log("gender: " + gender);
         let listUsers = await getUsersByGender(gender);
         let listUserAvailable = [];
@@ -201,6 +201,32 @@ const handle =async (userID, data) => {
     }
     return listUserNews;
 }
+async function getLoveUser(userID) {
+    let user = await getUserById(userID);
+    const loveUserIDs = user.listAccepted;
+    // console.log(loveUserIDs);
+    let listLoveUser = [];
+    for (let index = 0; index < loveUserIDs.length; index++) {
+        const element = loveUserIDs[index];
+        let loveUser = await getUserById(element);
+        
+        if(loveUser.listAccepted.find(user => user == userID)) {
+            listLoveUser.push({
+                id: loveUser.id,
+                user_name: loveUser.user_name,
+                images: loveUser.images,
+                phone: loveUser.phone,
+                social: loveUser.social,
+                birth: loveUser.birth,
+                description: loveUser.description,
+                hobbies: loveUser.hobbies,
+                gender: loveUser.gender
+            })
+        }
+    }
+    console.log(listLoveUser);
+    return listLoveUser
+}
 module.exports = {
     createUser,
     getUser,
@@ -213,5 +239,6 @@ module.exports = {
     getRandomUser,
     updateUserService: updateUser,
     getImgUrl,
-    handle
+    handle,
+    getLoveUser
 };
