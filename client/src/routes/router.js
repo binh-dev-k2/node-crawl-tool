@@ -4,8 +4,8 @@ import LoginPage from '../components/auth/LoginPage.vue'
 import RegisterPage from '@/components/auth/RegisterPage.vue';
 import HomePage from '@/components/HomePage.vue';
 import UpdateInforVue from '@/components/account/UpdateInfor.vue';
-import TestVue from '@/components/TestVue.vue';
 import { useStore } from 'vuex';
+import ListLoveVue from '@/components/ListLove/ListLove.vue';
 
 
 const routes = [
@@ -30,9 +30,9 @@ const routes = [
         component: UpdateInforVue
     },
     {
-        path: '/test',
-        name: 'test',
-        component: TestVue
+        path: '/list-love',
+        name: 'listLove',
+        component: ListLoveVue
     },
     {
         path: '/:catchAll(.*)',
